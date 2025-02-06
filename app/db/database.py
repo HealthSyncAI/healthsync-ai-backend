@@ -4,13 +4,18 @@ from app.core.config import settings
 
 DATABASE_URL = settings.database_uri
 
-# The engine manages the connection pool, handles the communications with your database,.
+# Create the engine
 engine = create_async_engine(
     DATABASE_URL, echo=True
-)  # echo=True will log all SQL statements
+)
 
-# Sessions are the main way you interact with your ORM-mapped models and the database.
+# Create a sessionmaker instance for AsyncSession
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-# The Base serves as the foundation for your database schema.
+# Base for models
 Base = declarative_base()
+
+
+async def get_db_session() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
