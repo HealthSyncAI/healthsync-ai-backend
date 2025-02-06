@@ -14,5 +14,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    hf_api_key:str = Field(..., alias="HF_API_KEY")
+
+
 
 settings = Settings()

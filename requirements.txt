@@ -14,3 +14,5 @@ httpx
 pydantic[email]
 python-multipart
 bcrypt
+transformers
+torch
