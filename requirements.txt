@@ -8,3 +8,9 @@ pytest
 pytest-asyncio
 pydantic-settings
 greenlet
+pyjwt
+passlib
+httpx
+pydantic[email]
+python-multipart
+bcrypt

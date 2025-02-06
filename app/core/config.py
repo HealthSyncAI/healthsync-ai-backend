@@ -10,5 +10,9 @@ class Settings(BaseSettings):
     api_endpoint: str = Field(..., alias="API_ENDPOINT")
     debug: bool = Field(False, alias="DEBUG")
 
+    jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+
 
 settings = Settings()

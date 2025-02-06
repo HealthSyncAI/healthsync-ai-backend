@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.api.routers import hello
 from app.core.config import settings
 from app.core.logger import setup_logging
+from app.api.routers import auth
 
 setup_logging()
 
@@ -13,6 +14,7 @@ app = FastAPI(
 
 # Include routers from the API module
 app.include_router(hello.router, prefix="/api")
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 
 # A basic health-check endpoint
