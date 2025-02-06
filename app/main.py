@@ -8,11 +8,12 @@ setup_logging()
 app = FastAPI(
     title="HealthSync AI",
     description="A production-ready healthcare application",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Include routers from the API module
 app.include_router(hello.router, prefix="/api")
+
 
 # A basic health-check endpoint
 @app.get("/")
