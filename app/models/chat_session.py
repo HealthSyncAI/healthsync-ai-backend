@@ -12,7 +12,9 @@ class ChatSession(Base):
     patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     input_text = Column(Text, nullable=False)
-    voice_transcription = Column(Text, nullable=True)  # Optional, if voice input is available.
+    voice_transcription = Column(
+        Text, nullable=True
+    )  # Optional, if voice input is available.
     deepseek_response = Column(Text, nullable=True)
     triage_advice = Column(Text, nullable=True)
 

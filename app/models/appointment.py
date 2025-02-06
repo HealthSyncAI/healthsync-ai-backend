@@ -20,12 +20,16 @@ class Appointment(Base):
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     scheduled_time = Column(DateTime, nullable=False)
-    status = Column(Enum(AppointmentStatus), default=AppointmentStatus.scheduled, nullable=False)
+    status = Column(
+        Enum(AppointmentStatus), default=AppointmentStatus.scheduled, nullable=False
+    )
     # For optional telemedicine video calls, store the meeting URL.
     telemedicine_url = Column(String(200), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     def __repr__(self):
         return f"<Appointment id={self.id} status={self.status.value}>"

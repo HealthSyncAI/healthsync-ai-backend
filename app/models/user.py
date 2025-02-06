@@ -27,10 +27,14 @@ class User(Base):
     # Doctor-specific details (nullable for non-doctors)
     specialization = Column(String(100), nullable=True)
     qualifications = Column(String(200), nullable=True)
-    is_available = Column(Boolean, default=True)  # Indicates if the doctor is available for appointments.
+    is_available = Column(
+        Boolean, default=True
+    )  # Indicates if the doctor is available for appointments.
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     def __repr__(self):
         return f"<User {self.username} ({self.role.value})>"
