@@ -12,6 +12,7 @@ from app.models.user import User, UserRole
 
 router = APIRouter()
 
+
 # Pydantic model for user registration input.
 class UserCreate(BaseModel):
     username: str
@@ -20,10 +21,12 @@ class UserCreate(BaseModel):
     first_name: str = None
     last_name: str = None
 
+
 # Pydantic model for the token response.
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 # OAuth2 scheme: tokenUrl points to our login endpoint.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -104,8 +107,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db_session: As
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db_session: AsyncSession = Depends(get_db_session)
+        token: str = Depends(oauth2_scheme),
+        db_session: AsyncSession = Depends(get_db_session)
 ):
     """
     Dependency to retrieve the current user from the JWT token.
