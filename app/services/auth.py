@@ -11,8 +11,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        db: AsyncSession = Depends(get_db_session)
+    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db_session)
 ) -> DBUser:
     """
     Dependency that extracts and verifies the JWT token from the request,
@@ -43,8 +42,7 @@ async def get_current_user(
     # If the user does not exist, raise an error (do not create a new user).
     if db_user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Return the SQLAlchemy user model instance.

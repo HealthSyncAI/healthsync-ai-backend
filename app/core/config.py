@@ -13,9 +13,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-
-    hf_api_key:str = Field(..., alias="HF_API_KEY")
-
+    open_router_api_key: str = Field(..., alias="OPEN_ROUTER_API_KEY")
 
 
 settings = Settings()
