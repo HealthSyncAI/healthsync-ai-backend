@@ -1,6 +1,16 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
+from app.services.auth import get_current_user
+
+# --- Dummy User Dependency for Authentication ---
+class DummyUser:
+    id = 1
+    username = "dummy_user"
+
+async def dummy_get_current_user():
+    """Return a dummy user to bypass real authentication."""
+    return DummyUser()
 
 @pytest.mark.asyncio
 async def test_registration_and_login():
@@ -11,6 +21,9 @@ async def test_registration_and_login():
     - Successfully log in with valid credentials.
     - Reject login attempts with invalid credentials.
     """
+    # Override the get_current_user dependency to always return DummyUser.
+    app.dependency_overrides[get_current_user] = dummy_get_current_user
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         # -------------------- Test Registration --------------------
@@ -28,6 +41,7 @@ async def test_registration_and_login():
 
         assert reg_response.status_code == 201, f"Expected status 201, got {reg_response.status_code}"
         reg_data = reg_response.json()
+
         assert "access_token" in reg_data, "Registration should return an access_token"
         assert reg_data.get("token_type") == "bearer", "Token type should be 'bearer'"
         print("Registration successful for user: testuser_auth.")
@@ -57,3 +71,6 @@ async def test_registration_and_login():
         inv_login_response = await client.post("/api/auth/login", data=invalid_login_data)
         assert inv_login_response.status_code == 400, f"Expected status 400 on invalid login, got {inv_login_response.status_code}"
         print("Login correctly rejected invalid credentials.")
+
+    # Clean up dependency override.
+    app.dependency_overrides.pop(get_current_user, None)

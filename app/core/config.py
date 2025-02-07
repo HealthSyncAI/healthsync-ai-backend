@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     database_uri: str = Field(..., alias="DATABASE_URI")
+    database_test_uri: str = Field(..., alias="DATABASE_TEST_URI")
+
     secret_key: str = Field(..., alias="SECRET_KEY")
     api_endpoint: str = Field(..., alias="API_ENDPOINT")
     debug: bool = Field(False, alias="DEBUG")
@@ -13,6 +15,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    open_router_api_key: str = Field(..., alias="OPEN_ROUTER_API_KEY")
 
 
 settings = Settings()

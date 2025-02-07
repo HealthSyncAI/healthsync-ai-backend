@@ -33,7 +33,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserCreate, db_session: AsyncSession = Depends(get_db_session)):
+async def register(
+    user_in: UserCreate, db_session: AsyncSession = Depends(get_db_session)
+):
     """
     Registration endpoint for new users.
     - Checks that the username/email is unique.
@@ -42,14 +44,16 @@ async def register(user_in: UserCreate, db_session: AsyncSession = Depends(get_d
     - Returns an access token upon successful registration.
     """
     # Check if a user with the provided email or username already exists.
-    query = select(User).where((User.email == user_in.email) | (User.username == user_in.username))
+    query = select(User).where(
+        (User.email == user_in.email) | (User.username == user_in.username)
+    )
     result = await db_session.execute(query)
     existing_user = result.scalars().first()
 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email or username already exists"
+            detail="A user with this email or username already exists",
         )
 
     # Hash the provided password.
@@ -62,7 +66,7 @@ async def register(user_in: UserCreate, db_session: AsyncSession = Depends(get_d
         hashed_password=hashed_password,
         first_name=user_in.first_name,
         last_name=user_in.last_name,
-        role=UserRole.patient
+        role=UserRole.patient,
     )
 
     db_session.add(new_user)
@@ -70,17 +74,21 @@ async def register(user_in: UserCreate, db_session: AsyncSession = Depends(get_d
     await db_session.refresh(new_user)
 
     # Create a JWT access token for the new user.
-    access_token_expires = timedelta(minutes=config.settings.access_token_expire_minutes)
+    access_token_expires = timedelta(
+        minutes=config.settings.access_token_expire_minutes
+    )
     access_token = security.create_access_token(
-        data={"sub": str(new_user.id)},
-        expires_delta=access_token_expires
+        data={"sub": str(new_user.id)}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db_session: AsyncSession = Depends(get_db_session)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db_session: AsyncSession = Depends(get_db_session),
+):
     """
     Login endpoint for user authentication.
     - Validates the provided credentials.
@@ -90,25 +98,28 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db_session: As
     result = await db_session.execute(query)
     user = result.scalars().first()
 
-    if not user or not security.verify_password(form_data.password, user.hashed_password):
+    if not user or not security.verify_password(
+        form_data.password, user.hashed_password
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect username or password"
+            detail="Incorrect username or password",
         )
 
     # Generate JWT token for the authenticated user.
-    access_token_expires = timedelta(minutes=config.settings.access_token_expire_minutes)
+    access_token_expires = timedelta(
+        minutes=config.settings.access_token_expire_minutes
+    )
     access_token = security.create_access_token(
-        data={"sub": str(user.id)},
-        expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        db_session: AsyncSession = Depends(get_db_session)
+    token: str = Depends(oauth2_scheme),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     """
     Dependency to retrieve the current user from the JWT token.
@@ -119,14 +130,12 @@ async def get_current_user(
     payload = security.decode_access_token(token)
     if payload is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
     user_id = payload.get("sub")
     if user_id is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
         )
 
     query = select(User).where(User.id == int(user_id))
@@ -135,7 +144,6 @@ async def get_current_user(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
     return user
