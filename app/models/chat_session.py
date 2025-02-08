@@ -15,7 +15,7 @@ class ChatSession(Base):
     voice_transcription = Column(
         Text, nullable=True
     )  # Optional, if voice input is available.
-    deepseek_response = Column(Text, nullable=True)
+    model_response = Column(Text, nullable=True)
     triage_advice = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
