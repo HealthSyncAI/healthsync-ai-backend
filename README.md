@@ -45,6 +45,9 @@ Create and activate a virtual environment, then install dependencies:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+export PYTHONPATH="."
+python app/db/create_tables.py
 ```
 ### 4. Run the Backend Server
 Start the backend server using Uvicorn with live reload enabled:
