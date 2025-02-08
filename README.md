@@ -1,30 +1,68 @@
-# HealthSyncAIBackend
+# HealthSync AI Backend
 
-## Configuration Setup
+Welcome to HealthSync AI, a production-ready healthcare application backend built with FastAPI. This document explains how to set up your development environment, run the backend server, and execute tests.
 
-This project uses a configuration module built with [Pydantic's BaseSettings](https://pydantic.dev/latest/concepts/pydantic_settings/) to manage environment variables and secure settings for the application. These settings are automatically loaded and validated from your environment or a `.env` file.
+## Prerequisites
 
-### Supported Environment Variables
+- [Docker](https://www.docker.com/) installed on your system
+- Python 3.8+ installed locally
+- Git for cloning the repository
 
-- **DATABASE_URI**: The URI for connecting to your database.  
-  _Example_: `postgresql://user:password@localhost/dbname`
+## Getting Started
 
-- **SECRET_KEY**: A secret key used for cryptographic operations such as JWT token signing.  
-  _Example_: `your_very_secret_key`
-
-- **API_ENDPOINT**: The URL of the external API your application will integrate with.  
-  _Example_: `https://api.example.com`
-
-- **DEBUG**: A boolean flag to enable or disable debug mode.  
-  _Example_: `True`
-
-### .env File Example
-
-Create a `.env` file in the project's root directory with values similar to the following:
+### 1. Clone the Repository
+Clone the repository and navigate to the project directory:
+```bash
+git clone https://github.com/HealthSyncAI/healthsync-ai-backend.git
+cd healthsync_ai
 ```
-DATABASE_URI=postgresql://user:password@localhost/dbname
-SECRET_KEY=your_very_secret_key
-API_ENDPOINT=https://api.example.com
-DEBUG=True
+
+### 2. Set Up the Databases with Docker (Optional)
+For local development, start the PostgreSQL container with:
+```angular2html
+# Local (production use)
+docker run --name healthsync-postgres \
+  -e POSTGRES_USER=myuser \
+  -e POSTGRES_PASSWORD=mypassword \
+  -e POSTGRES_DB=healthsync_db \
+  -p 5432:5432 \
+  -d postgres
 ```
-The engine is created in `app/db/init_db.py` as shown below:
+For testing purposes, run a separate PostgreSQL container:
+```angular2html
+# Test environment
+docker run --name healthsync-postgres-test \
+  -e POSTGRES_USER=myuser \
+  -e POSTGRES_PASSWORD=mypassword \
+  -e POSTGRES_DB=healthsync_db_test \
+  -p 5433:5432 \
+  -d postgres
+```
+
+### 3. Set Up the Python Environment
+Create and activate a virtual environment, then install dependencies:
+```angular2html
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+### 4. Run the Backend Server
+Start the backend server using Uvicorn with live reload enabled:
+```angular2html
+uvicorn app.main:app --reload
+```
+Your backend will be accessible at http://127.0.0.1:8000. 
+To explore the API, visit the 
+- automatically generated [Swagger documentation](http://127.0.0.1:8000/docs).
+- postman [Postman documentation](https://documenter.getpostman.com/view/21095095/2sAYX8JML3)
+
+### 5. Run the Tests (Optional)
+You can run the tests using Pytest. For example:
+```angular2html
+pytest -v tests/test_get_chatbot.py
+pytest -v tests/test_post_chatbot.py
+pytest -v tests/test_auth.py
+pytest -v tests/test_crud_schema.py
+```
+
+Make sure your environment variables (e.g., in the .env file) are properly configured.
