@@ -14,3 +14,4 @@ httpx
 pydantic[email]
 python-multipart
 bcrypt
+openai
