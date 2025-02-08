@@ -17,7 +17,7 @@ git clone https://github.com/HealthSyncAI/healthsync-ai-backend.git
 cd healthsync_ai
 ```
 
-### 2. Set Up the Databases with Docker (Optional)
+### 2. Set Up the Databases with Docker
 For local development, start the PostgreSQL container with:
 ```angular2html
 # Local (production use)
@@ -28,7 +28,7 @@ docker run --name healthsync-postgres \
   -p 5432:5432 \
   -d postgres
 ```
-For testing purposes, run a separate PostgreSQL container:
+For testing purposes, run a separate PostgreSQL container (Optional):
 ```angular2html
 # Test environment
 docker run --name healthsync-postgres-test \
