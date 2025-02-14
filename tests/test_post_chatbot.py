@@ -66,7 +66,7 @@ async def test_analyze_symptoms(monkeypatch):
     app.dependency_overrides[get_current_user] = dummy_get_current_user
     app.dependency_overrides[get_db_session] = dummy_get_db_session
 
-    from app.api.routers.chatbot import client
+    from app.ai.chatbot import client
 
     monkeypatch.setattr(client.chat.completions, "create", dummy_completion_create)
 
