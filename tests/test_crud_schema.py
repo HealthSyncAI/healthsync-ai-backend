@@ -70,7 +70,7 @@ async def test_crud():
             patient_id=patient.id,
             input_text="I have a cough and slight fever.",
             voice_transcription=None,
-            deepseek_response='{"analysis": "suggests mild respiratory infection"}',
+            model_response='{"analysis": "suggests mild respiratory infection"}',
             triage_advice="Schedule a checkup and monitor symptoms.",
         )
         session.add(chat_session)
