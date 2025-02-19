@@ -3,7 +3,7 @@ from httpx import AsyncClient, ASGITransport
 
 from app.db.database import get_db_session
 from app.main import app
-from app.services.auth import get_current_user
+from app.services.auth import AuthService
 
 
 class DummyUser:
@@ -63,7 +63,7 @@ async def test_analyze_symptoms(monkeypatch):
     - Monkey-patch the OpenAI client's chat.completions.create method.
     - Send a POST request and verify the response.
     """
-    app.dependency_overrides[get_current_user] = dummy_get_current_user
+    app.dependency_overrides[AuthService.get_current_user] = dummy_get_current_user
     app.dependency_overrides[get_db_session] = dummy_get_db_session
 
     from app.ai.chatbot import client
@@ -84,5 +84,5 @@ async def test_analyze_symptoms(monkeypatch):
 
         print("Test /symptom passed with response:", data)
 
-    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(AuthService.get_current_user, None)
     app.dependency_overrides.pop(get_db_session, None)

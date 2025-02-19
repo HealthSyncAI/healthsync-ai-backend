@@ -4,7 +4,7 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.db.database import get_db_session
-from app.services.auth import get_current_user
+from app.services.auth import AuthService
 
 
 class DummyUser:
@@ -76,7 +76,7 @@ async def test_get_user_chats():
     - Override authentication and DB dependencies with dummy objects.
     - Send a GET request and verify the response contains the expected dummy chat sessions.
     """
-    app.dependency_overrides[get_current_user] = dummy_get_current_user
+    app.dependency_overrides[AuthService.get_current_user] = dummy_get_current_user
     app.dependency_overrides[get_db_session] = dummy_get_db_session
 
     transport = ASGITransport(app=app)
@@ -105,5 +105,5 @@ async def test_get_user_chats():
 
         print("Test GET /chats passed with response:", data)
 
-    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(AuthService.get_current_user, None)
     app.dependency_overrides.pop(get_db_session, None)

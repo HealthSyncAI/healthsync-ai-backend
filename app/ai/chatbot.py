@@ -18,7 +18,9 @@ client = OpenAI(
 )
 
 
-async def analyze_symptoms_service(payload: SymptomRequest, current_user, db: AsyncSession) -> ChatbotResponse:
+async def analyze_symptoms_service(
+    payload: SymptomRequest, current_user, db: AsyncSession
+) -> ChatbotResponse:
     try:
         loop = asyncio.get_running_loop()
         messages = [
@@ -78,7 +80,9 @@ async def analyze_symptoms_service(payload: SymptomRequest, current_user, db: As
             f"Chat session recorded for user {current_user.username} (session id: {chat_session.id})"
         )
     except Exception as exc:
-        logger.error(f"Error saving chat session for user {current_user.username}: {exc}")
+        logger.error(
+            f"Error saving chat session for user {current_user.username}: {exc}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while saving the chat session.",
@@ -97,7 +101,9 @@ async def get_user_chats_service(current_user, db: AsyncSession):
         result = await db.execute(query)
         chat_sessions = result.scalars().all()
     except Exception as exc:
-        logger.error(f"Error retrieving chat sessions for user {current_user.username}: {exc}")
+        logger.error(
+            f"Error retrieving chat sessions for user {current_user.username}: {exc}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while retrieving chat sessions.",
