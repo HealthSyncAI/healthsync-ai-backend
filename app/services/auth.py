@@ -20,7 +20,8 @@ class AuthService:
     async def register_user(
         self, user_in: UserCreate, db_session: AsyncSession
     ) -> Token:
-        """Registers a new user."""
+        """Registers a new user, handling additional health information."""
+
         query = select(User).where(
             (User.email == user_in.email) | (User.username == user_in.username)
         )
@@ -34,13 +35,21 @@ class AuthService:
             )
 
         hashed_password = security.get_password_hash(user_in.password)
+
         new_user = User(
             username=user_in.username,
             email=user_in.email,
             hashed_password=hashed_password,
             first_name=user_in.first_name,
             last_name=user_in.last_name,
-            role=UserRole.patient,
+            role=UserRole.patient,  # Default to patient, as before
+            date_of_birth=user_in.date_of_birth,
+            gender=user_in.gender,
+            height_cm=user_in.height_cm,
+            weight_kg=user_in.weight_kg,
+            blood_type=user_in.blood_type,
+            allergies=user_in.allergies,
+            existing_conditions=user_in.existing_conditions,
         )
 
         db_session.add(new_user)

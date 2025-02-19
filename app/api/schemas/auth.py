@@ -1,12 +1,23 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+from datetime import date
+from app.models.user import Gender
 
 
 class UserCreate(BaseModel):
-    username: str
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    password: str
-    first_name: str = None
-    last_name: str = None
+    password: str = Field(..., min_length=8)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[Gender] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[str] = None
+    existing_conditions: Optional[str] = None
+    # role: UserRole = UserRole.patient # Removed, handled in the registration function.
 
 
 class Token(BaseModel):
