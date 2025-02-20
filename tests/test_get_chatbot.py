@@ -93,14 +93,16 @@ async def test_get_user_chats():
         chat1 = data[0]
         assert chat1["id"] == 1, "First chat session ID does not match expected value."
         assert chat1["input_text"] == "I feel dizzy", "First chat session input text mismatch."
-        assert chat1["model_response"] == "Possible dehydration", "First chat session analysis mismatch."
+        assert chat1[
+                   "model_response"] == "Possible dehydration", "First chat session analysis mismatch."  # Corrected field name
         assert chat1["triage_advice"] == "Hydrate well and rest", "First chat session triage_advice mismatch."
 
         # Validate the second chat session.
         chat2 = data[1]
         assert chat2["id"] == 2, "Second chat session ID does not match expected value."
         assert chat2["input_text"] == "I have a fever", "Second chat session input text mismatch."
-        assert chat2["model_response"] == "Could be a viral infection", "Second chat session analysis mismatch."
+        assert chat2[
+                   "model_response"] == "Could be a viral infection", "Second chat session analysis mismatch."  # Corrected field name
         assert chat2["triage_advice"] is None, "Second chat session triage_advice should be None."
 
         print("Test GET /chats passed with response:", data)

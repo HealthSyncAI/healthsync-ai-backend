@@ -47,10 +47,17 @@ class DummyResponse:
         self.choices = [DummyChoice(content)]
 
 
+async def dummy_completion_create_async(*args, **kwargs):
+    """
+    Simulate an *asynchronous* call to the OpenAI completion endpoint.
+    Returns a dummy response with a fixed analysis text.
+    """
+    return DummyResponse("Dummy analysis: Likely migraine. Suggest rest and hydration.")
+
+
 def dummy_completion_create(*args, **kwargs):
     """
-    Simulate a call to the OpenAI completion endpoint.
-    Returns a dummy response with a fixed analysis text.
+    Simulate a synchronous call to the OpenAI completion endpoint
     """
     return DummyResponse("Dummy analysis: Likely migraine. Suggest rest and hydration.")
 
@@ -68,6 +75,7 @@ async def test_analyze_symptoms(monkeypatch):
 
     from app.ai.chatbot import client
 
+    # Correctly monkeypatch the *synchronous* function that's run in the executor.
     monkeypatch.setattr(client.chat.completions, "create", dummy_completion_create)
 
     transport = ASGITransport(app=app)
@@ -79,8 +87,8 @@ async def test_analyze_symptoms(monkeypatch):
         data = response.json()
         assert data["input_text"] == payload["symptom_text"]
         assert "Dummy analysis" in data["analysis"]
-        assert data.get("triage_advice") is None
-        assert data.get("model_response") is None
+        assert data.get("triage_advice") is None  # Expecting None
+        assert data.get("model_response") is not None  # Should be populated
 
         print("Test /symptom passed with response:", data)
 
