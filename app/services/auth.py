@@ -43,7 +43,7 @@ class AuthService:
             hashed_password=hashed_password,
             first_name=user_in.first_name,
             last_name=user_in.last_name,
-            role=UserRole.patient,  # Default to patient, as before
+            role=user_in.role,  # Using the role provided by the client (patient or doctor)
             date_of_birth=user_in.date_of_birth,
             gender=user_in.gender,
             height_cm=user_in.height_cm,

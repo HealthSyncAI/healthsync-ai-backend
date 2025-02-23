@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import date
-from app.models.user import Gender
+from app.models.user import Gender, UserRole
 
 
 class UserCreate(BaseModel):
@@ -17,7 +17,7 @@ class UserCreate(BaseModel):
     blood_type: Optional[str] = None
     allergies: Optional[str] = None
     existing_conditions: Optional[str] = None
-    # role: UserRole = UserRole.patient # Removed, handled in the registration function.
+    role: UserRole = UserRole.patient
 
 
 class Token(BaseModel):
