@@ -11,12 +11,16 @@ from app.services.auth import AuthService, oauth2_scheme
 router = APIRouter()
 
 
-@router.post("/appointments", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/appointments",
+    response_model=AppointmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def schedule_appointment(
-        payload: AppointmentRequest,
-        auth_service: AuthService = Depends(AuthService),
-        token: str = Depends(oauth2_scheme),
-        db: AsyncSession = Depends(get_db_session),
+    payload: AppointmentRequest,
+    auth_service: AuthService = Depends(AuthService),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db_session),
 ):
     # Retrieve the current user (patient)
     current_user = await auth_service.get_current_user(token)
