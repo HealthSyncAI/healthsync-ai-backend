@@ -1,8 +1,9 @@
 from datetime import timedelta
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import select, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.auth import UserCreate, Token
@@ -90,7 +91,9 @@ class AuthService:
 
         return Token(access_token=access_token, token_type="bearer")
 
-    async def get_current_user(self, token: str = Depends(oauth2_scheme)) -> User:
+    async def get_current_user(
+        self, token: str = Depends(oauth2_scheme)
+    ) -> Row[Any] | RowMapping:
         """Retrieves the current user from the JWT token."""
         payload = security.decode_access_token(token)
         if payload is None:
@@ -105,7 +108,7 @@ class AuthService:
             )
 
         query = select(User).where(User.id == int(user_id))
-        result = await self.db_session.execute(query)  # Use self.db_session
+        result = await self.db_session.execute(query)
         user = result.scalars().first()
 
         if not user:
