@@ -26,7 +26,6 @@ client = OpenAI(
     api_key=settings.open_router_api_key,
 )
 
-
 # --- Data Models (for Pipeline Stages) ---
 
 
@@ -69,18 +68,25 @@ def preprocess_input(payload: SymptomRequest, current_user) -> PreprocessedInput
 
 
 async def generate_llm_response(preprocessed_input: PreprocessedInput) -> LLMResponse:
-    """Transformer: Interacts with the LLM."""
+    """Transformer: Interacts with the LLM using an enhanced system prompt.
+
+    The system prompt instructs the model to assume a doctor persona and to begin its answer with a specific
+    keyword (TRIAGE_IMMEDIATE, TRIAGE_SCHEDULE, or TRIAGE_SELF_CARE) to denote the triage outcome.
+    """
     try:
         loop = asyncio.get_running_loop()
         messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are a highly skilled doctor specializing in diagnosing common diseases. "
-                    "Based on the patient's symptom description provided in the next message, determine "
-                    "the most likely condition and provide clear recommendations on what steps to take. "
-                    "Advise whether the patient should seek immediate care, schedule an appointment, or try home remedies. "
-                    "Offer this guidance proactively without the patient needing to ask."
+                    "You are a highly qualified medical doctor with extensive expertise in diagnosing common "
+                    "ailments and providing accurate, actionable recommendations. Read the patient's symptom "
+                    "description carefully and then provide a concise evaluation that includes a clear recommendation. "
+                    "IMPORTANT: Begin your response with one keyword that precisely indicates the appropriate triage: "
+                    "'TRIAGE_IMMEDIATE' if the patient should seek immediate emergency care, "
+                    "'TRIAGE_SCHEDULE' if scheduling a doctor’s appointment is advised, or "
+                    "'TRIAGE_SELF_CARE' if the symptoms can be managed with self-care/home remedies. "
+                    "Your answer should then follow with detailed yet focused advice."
                 ),
             },
             {"role": "user", "content": preprocessed_input.clean_text},
@@ -113,13 +119,20 @@ def validate_response(llm_response: LLMResponse) -> ValidationResult:
 
 
 async def generate_triage_advice(llm_response: LLMResponse) -> Optional[str]:
-    """Transformer: Generate triage advice based on analysis."""
-    if "immediate care" in llm_response.analysis.lower():
+    """Transformer: Generate triage advice based on analysis.
+
+    This function checks the language model output for keywords that indicate a level
+    of urgency and returns a corresponding triage recommendation.
+    """
+    analysis_text = llm_response.analysis.upper()
+    if "TRIAGE_IMMEDIATE" in analysis_text:
         return "seek_immediate_care"
-    elif "schedule an appointment" in llm_response.analysis.lower():
+    elif "TRIAGE_SCHEDULE" in analysis_text:
         return "schedule_appointment"
-    else:
-        return None
+    elif "TRIAGE_SELF_CARE" in analysis_text:
+        return "self_care_recommended"
+
+    return None
 
 
 async def save_chat_session(
@@ -218,7 +231,7 @@ async def get_user_chats_service(current_user, db: AsyncSession):
         for session in chat_sessions:
             rn = (
                 session.room_number
-            )  # Accesses property which now uses the eagerly loaded chat_room
+            )  # Exposes the room number from the eagerly loaded ChatRoom
             if rn not in room_groups:
                 room_groups[rn] = []
             room_groups[rn].append(ChatSessionOut.from_orm(session))
