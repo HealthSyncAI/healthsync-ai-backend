@@ -1,7 +1,6 @@
 from fastapi import FastAPI
-from app.core.config import settings
 from app.core.logger import setup_logging
-from app.api.routers import auth, chatbot, appointments
+from app.api.routers import auth, chatbot, appointment, health_record
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -15,7 +14,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # update with your Next.js domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,8 +24,9 @@ app.add_middleware(
 # Include routers from the API module
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
+app.include_router(appointment.router, prefix="/api/appointment", tags=["appointment"])
 app.include_router(
-    appointments.router, prefix="/api/appointments", tags=["appointments"]
+    health_record.router, prefix="/api/health-record", tags=["health-record"]
 )
 
 

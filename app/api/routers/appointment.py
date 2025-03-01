@@ -1,18 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from typing import List
 
 from app.api.schemas.appointment import AppointmentRequest, AppointmentResponse
+from app.api.schemas.health_record import HealthRecordOut
 from app.db.database import get_db_session
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.user import User
 from app.services.auth import AuthService, oauth2_scheme
+from app.services.health_record import (
+    create_triage_record_from_chats,
+    get_patient_health_records,
+)
 
 router = APIRouter()
 
 
 @router.post(
-    "/appointments",
+    "/",
     response_model=AppointmentResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -47,4 +53,37 @@ async def schedule_appointment(
     await db.commit()
     await db.refresh(new_appointment)
 
+    # Generate a health record from the patient's chat history
+    await create_triage_record_from_chats(db, current_user.id, payload.doctor_id)
+
     return new_appointment
+
+
+@router.get("/{appointment_id}/health-records", response_model=List[HealthRecordOut])
+async def get_patient_health_records_for_doctor(
+    appointment_id: int,
+    auth_service: AuthService = Depends(AuthService),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Get health records for a patient that a doctor is seeing."""
+    current_user = await auth_service.get_current_user(token)
+
+    # Verify this is a valid appointment and the doctor has rights to see it
+    query = select(Appointment).where(
+        Appointment.id == appointment_id,
+        (Appointment.doctor_id == current_user.id)
+        | (Appointment.patient_id == current_user.id),
+    )
+    result = await db.execute(query)
+    appointment = result.scalar_one_or_none()
+
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found or you don't have permission to access it.",
+        )
+
+    # Get the patient's health records
+    records = await get_patient_health_records(db, appointment.patient_id)
+    return records

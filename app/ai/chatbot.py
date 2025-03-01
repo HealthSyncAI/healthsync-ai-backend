@@ -1,13 +1,15 @@
+import json
 import asyncio
 import logging
-from typing import Optional
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 
 from fastapi import HTTPException, status
 from openai import OpenAI
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload  # Newly imported for eager loading
+from sqlalchemy.orm import selectinload
 
 from app.api.schemas.chatbot import (
     ChatbotResponse,
@@ -18,6 +20,7 @@ from app.api.schemas.chatbot import (
 from app.core.config import settings
 from app.models.chat_session import ChatSession
 from app.models.chat_room import ChatRoom
+from app.models.health_record import HealthRecord, RecordType
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ class PreprocessedInput(BaseModel):
     original_text: str
     clean_text: str
     user_id: int
-    room_number: Optional[int] = None  # Optional room number from the request
+    room_number: Optional[int] = None
 
 
 class LLMResponse(BaseModel):
@@ -53,12 +56,17 @@ class PipelineOutput(BaseModel):
     model_response: Optional[str] = None
 
 
+class SymptomExtraction(BaseModel):
+    symptoms: List[Dict[str, Any]]
+    confidence_score: float
+
+
 # --- Pipeline Stages (Functions) ---
 
 
 def preprocess_input(payload: SymptomRequest, current_user) -> PreprocessedInput:
     """Transformer: Preprocesses the input text."""
-    clean_text = payload.symptom_text.lower().strip()  # Basic cleaning
+    clean_text = payload.symptom_text.lower().strip()
     return PreprocessedInput(
         original_text=payload.symptom_text,
         clean_text=clean_text,
@@ -140,7 +148,7 @@ async def save_chat_session(
     preprocessed_input: PreprocessedInput,
     llm_response: LLMResponse,
     triage_advice: Optional[str],
-) -> None:
+) -> Optional[ChatSession]:
     """Consumer: Saves the chat session (and creates/uses a chat room) in the database."""
     try:
         # Determine (or create) the chat room.
@@ -187,11 +195,12 @@ async def save_chat_session(
             f"Chat session recorded for user {preprocessed_input.user_id} (session id: {chat_session.id}, "
             f"chat room: {chat_room.room_number})"
         )
+        return chat_session
     except Exception as exc:
         logger.error(
             f"Error saving chat session for user {preprocessed_input.user_id}: {exc}"
         )
-        # Log the error without raising to avoid failing the whole request.
+        return None
 
 
 async def analyze_symptoms_pipeline(
@@ -203,8 +212,12 @@ async def analyze_symptoms_pipeline(
     validation_result = validate_response(llm_response)
     if not validation_result.is_valid:
         raise HTTPException(status_code=500, detail=validation_result.error_message)
+
     triage_advice = await generate_triage_advice(llm_response)
+
+    # Save chat session (just store the chat, no health record creation)
     await save_chat_session(db, preprocessed_input, llm_response, triage_advice)
+
     return ChatbotResponse(
         input_text=preprocessed_input.original_text,
         analysis=llm_response.analysis,
@@ -249,3 +262,48 @@ async def get_user_chats_service(current_user, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while retrieving chat sessions.",
         )
+
+
+async def extract_symptoms(symptom_text: str) -> SymptomExtraction:
+    """Extract structured symptoms from the patient's input using LLM."""
+    try:
+        loop = asyncio.get_running_loop()
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a medical symptom analyzer. Extract symptoms from the patient's description. "
+                    "For each symptom, identify: name, severity (1-10 if mentioned), duration (if mentioned), "
+                    "and any specific description. Return ONLY JSON in this format: "
+                    "{'symptoms': [{'name': 'symptom name', 'severity': severity_number, "
+                    "'duration': 'duration_text', 'description': 'specific_details'}], "
+                    "'confidence_score': float_between_0_and_1}"
+                ),
+            },
+            {"role": "user", "content": symptom_text},
+        ]
+
+        model_response = await loop.run_in_executor(
+            None,
+            lambda: client.chat.completions.create(
+                model="google/gemini-2.0-flash-exp:free",
+                messages=messages,
+                response_format={"type": "json_object"},
+            ),
+        )
+
+        extraction_text = model_response.choices[0].message.content
+        # Parse JSON response
+        try:
+            extraction_data = json.loads(extraction_text)
+            return SymptomExtraction(
+                symptoms=extraction_data.get("symptoms", []),
+                confidence_score=extraction_data.get("confidence_score", 0.5),
+            )
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse symptom extraction: {extraction_text}")
+            return SymptomExtraction(symptoms=[], confidence_score=0.0)
+
+    except Exception as exc:
+        logger.error(f"Error in symptom extraction: {exc}")
+        return SymptomExtraction(symptoms=[], confidence_score=0.0)
