@@ -58,3 +58,44 @@ class User(Base):
 
     def __repr__(self):
         return f"<User {self.username} ({self.role.value})>"
+
+        # app/models/user.py
+        # Add these properties to the existing User class
+
+    @property
+    def years_experience(self):
+        # For now, we'll return a dummy value based on user ID to simulate variation
+        if self.role != UserRole.doctor:
+            return None
+        return (self.id * 3) % 15 + 1  # 1-15 years of experience
+
+    @property
+    def bio(self):
+        if self.role != UserRole.doctor:
+            return None
+        spec = self.specialization or "General Medicine"
+        return f"Experienced physician specializing in {spec}. Committed to providing compassionate and comprehensive care."
+
+    @property
+    def rating(self):
+        if self.role != UserRole.doctor:
+            return None
+        # Generate a rating between 4.0 and 5.0
+        return 4.0 + ((self.id % 10) / 10)
+
+    @property
+    def expertise_areas(self):
+        if not self.specialization or self.role != UserRole.doctor:
+            return []
+        # Generate some expertise areas based on specialization
+        base_expertise = self.specialization.split(", ")
+        if "Cardiology" in self.specialization:
+            return base_expertise + ["Heart Disease", "Hypertension Management"]
+        elif "Neurology" in self.specialization:
+            return base_expertise + ["Headache Disorders", "Movement Disorders"]
+        return base_expertise
+
+    @property
+    def languages(self):
+        # Default languages for all doctors
+        return ["English", "Spanish"] if self.role == UserRole.doctor else []
