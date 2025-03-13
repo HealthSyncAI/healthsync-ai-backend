@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.auth import UserCreate, Token
 from app.core import security, config
+from app.core.email_service import EmailService
 from app.db.database import get_db_session
-from app.models.user import User, UserRole
+from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -17,12 +18,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 class AuthService:
     def __init__(self, db_session: AsyncSession = Depends(get_db_session)):
         self.db_session = db_session
+        self.email_service = EmailService()
 
     async def register_user(
         self, user_in: UserCreate, db_session: AsyncSession
     ) -> Token:
         """Registers a new user, handling additional health information."""
-
         query = select(User).where(
             (User.email == user_in.email) | (User.username == user_in.username)
         )
@@ -43,7 +44,7 @@ class AuthService:
             hashed_password=hashed_password,
             first_name=user_in.first_name,
             last_name=user_in.last_name,
-            role=user_in.role,  # Using the role provided by the client (patient or doctor)
+            role=user_in.role,
             date_of_birth=user_in.date_of_birth,
             gender=user_in.gender,
             height_cm=user_in.height_cm,
@@ -56,6 +57,11 @@ class AuthService:
         db_session.add(new_user)
         await db_session.commit()
         await db_session.refresh(new_user)
+
+        # Send welcome email
+        await self.email_service.send_registration_email(
+            user_email=new_user.email, username=new_user.username
+        )
 
         access_token_expires = timedelta(
             minutes=config.settings.access_token_expire_minutes
