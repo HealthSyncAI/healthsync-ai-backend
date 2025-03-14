@@ -16,3 +16,4 @@ python-multipart
 bcrypt
 openai
 apscheduler
+mailjet_rest

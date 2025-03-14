@@ -50,18 +50,26 @@ class SchedulerService:
         Sends notification emails to both patient and doctor for a given appointment.
         """
         try:
+            logger.info(f"Starting notification for appointment ID {appointment.id}")
+
             # Fetch patient and doctor details
             patient_query = select(User).where(User.id == appointment.patient_id)
             doctor_query = select(User).where(User.id == appointment.doctor_id)
 
+            logger.info(f"Fetching patient with ID: {appointment.patient_id}")
             patient_result = await db.execute(patient_query)
             patient = patient_result.scalar_one_or_none()
+
+            logger.info(f"Fetching doctor with ID: {appointment.doctor_id}")
             doctor_result = await db.execute(doctor_query)
             doctor = doctor_result.scalar_one_or_none()
 
             if not patient or not doctor:
                 logger.warning(f"Could not retrieve patient or doctor for appointment ID {appointment.id}")
                 return
+
+            logger.info(
+                f"Patient found: {patient.email if patient else 'None'}, Doctor found: {doctor.email if doctor else 'None'}")
 
             # Construct email messages
             patient_subject = "Appointment Reminder"
@@ -99,11 +107,14 @@ class SchedulerService:
             """
 
             # Send emails
+            logger.info(f"Sending email to patient: {patient.email}")
             await self.email_service.send_email(patient.email, patient_subject, patient_body)
+            logger.info(f"Sending email to doctor: {doctor.email}")
             await self.email_service.send_email(doctor.email, doctor_subject, doctor_body)
-            logger.info(
-                f"Notifications sent for appointment ID {appointment.id} (Patient: {patient.email}, Doctor: {doctor.email})")
 
+            logger.info(
+                f"Notifications sent for appointment ID {appointment.id} (Patient: {patient.email}, Doctor: {doctor.email})"
+            )
 
         except Exception as e:
             logger.error(f"Error notifying appointment {appointment.id}: {e}")
@@ -111,7 +122,7 @@ class SchedulerService:
 
     def start_scheduler(self):
         """Starts the APScheduler."""
-        self.scheduler.add_job(self.check_and_notify_appointments, 'cron', hour=0, minute=0)  # Run at midnight
+        self.scheduler.add_job(self.check_and_notify_appointments, 'cron', hour=10, minute=30)  # Run at midnight
         self.scheduler.start()
         logger.info("Scheduler started...")
 

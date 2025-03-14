@@ -1,71 +1,65 @@
-import smtplib
+import logging
 import traceback
-from email.message import EmailMessage
 
 from fastapi import HTTPException, status
+from mailjet_rest import Client
 
 from app.core.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = settings.SMTP_SERVER
-        self.smtp_port = settings.SMTP_PORT
-        self.smtp_username = settings.SMTP_USERNAME
-        self.smtp_password = settings.SMTP_PASSWORD
-        self.from_email = settings.SMTP_FROM_EMAIL
+        self.mailjet = Client(auth=(settings.MAILJET_API_KEY, settings.MAILJET_SECRET_KEY), version='v3.1')
+        self.from_email = settings.MAILJET_FROM_EMAIL
+        self.from_name = settings.MAILJET_FROM_NAME
 
     async def send_email(self, to: str, subject: str, body: str):
-        """Send a simple email using SMTP with enhanced error handling."""
+        """Send an email using Mailjet with enhanced error handling."""
         try:
+            logger.info(f"Preparing to send email to: {to}")
+
             # Validate input
             if not self._is_valid_email(to):
+                logger.error(f"Invalid email address: {to}")
                 raise ValueError(f"Invalid email address: {to}")
 
-            msg = EmailMessage()
-            msg["Subject"] = subject
-            msg["From"] = self.from_email
-            msg["To"] = to
-            msg.set_content(body)
+            data = {
+                'Messages': [
+                    {
+                        "From": {
+                            "Email": self.from_email,
+                            "Name": self.from_name
+                        },
+                        "To": [
+                            {
+                                "Email": to,
+                                "Name": to
+                            }
+                        ],
+                        "Subject": subject,
+                        "TextPart": body,
+                    }
+                ]
+            }
 
-            # Explicitly start TLS encryption
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.ehlo()
+            logger.info(f"Mailjet data prepared for: {to}")
+            logger.debug(f"Mailjet data: {data}")  # added log
 
-            # Login with credentials
-            server.login(self.smtp_username, self.smtp_password)
+            logger.info("Attempting to send email via Mailjet...")
+            result = self.mailjet.send.create(data=data)
+            logger.info(f"Mailjet result: {result.json()}")  # added log
 
-            # Send the email
-            server.send_message(msg)
-            server.quit()
+            if result.status_code != 200:
+                logger.error(f"Mailjet API error: {result.status_code}, {result.json()}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to send email via Mailjet",
+                )
 
             logger.info(f"Email sent to {to} successfully")
 
-        except smtplib.SMTPAuthenticationError:
-            logger.error(
-                f"SMTP authentication failed for {to}. Check your credentials."
-            )
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid SMTP credentials",
-            )
-        except smtplib.SMTPServerDisconnected:
-            logger.error(f"SMTP server disconnected for {to}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="SMTP server connection lost",
-            )
-        except smtplib.SMTPException as e:
-            logger.error(f"SMTP error occurred: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send email",
-            )
         except Exception as e:
             logger.error(f"Unexpected error while sending email: {str(e)}")
             logger.error(traceback.format_exc())
@@ -75,7 +69,7 @@ class EmailService:
             )
 
     async def send_registration_email(self, user_email: str, username: str):
-        """Send a welcome email to a new user with enhanced error handling."""
+        """Send a welcome email to a new user using Mailjet."""
         subject = "Welcome to HealthSync AI!"
         body = f"""
         Dear {username},
