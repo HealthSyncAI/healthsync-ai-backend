@@ -17,11 +17,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     open_router_api_key: str = Field(..., alias="OPEN_ROUTER_API_KEY")
 
-    # Mailjet settings
-    MAILJET_API_KEY: str = Field(..., alias="MAILJET_API_KEY")
-    MAILJET_SECRET_KEY: str = Field(..., alias="MAILJET_SECRET_KEY")
-    MAILJET_FROM_EMAIL: str = Field(..., alias="MAILJET_FROM_EMAIL")
-    MAILJET_FROM_NAME: str = Field("HealthSync AI", alias="MAILJET_FROM_NAME")
+    # SMTP settings
+    SMTP_SERVER: str = Field(..., alias="SMTP_SERVER")
+    SMTP_PORT: int = Field(587, alias="SMTP_PORT")
+    SMTP_USERNAME: str = Field(..., alias="SMTP_USERNAME")
+    SMTP_PASSWORD: str = Field(..., alias="SMTP_PASSWORD")
+    SMTP_FROM_EMAIL: str = Field(..., alias="SMTP_FROM_EMAIL")
+    SMTP_FROM_NAME: str = Field("HealthSync AI", alias="SMTP_FROM_NAME")
 
 
 settings = Settings()

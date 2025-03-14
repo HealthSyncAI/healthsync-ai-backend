@@ -26,13 +26,17 @@ class SchedulerService:
         logger.info("Running daily appointment notification check...")
         async for db in get_db_session():
             try:
-                today_start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                today_end = datetime.datetime.now().replace(hour=23, minute=59, second=59, microsecond=999)
+                today_start = datetime.datetime.now().replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                today_end = datetime.datetime.now().replace(
+                    hour=23, minute=59, second=59, microsecond=999
+                )
 
                 query = select(Appointment).where(
                     Appointment.start_time >= today_start,
                     Appointment.start_time <= today_end,
-                    Appointment.status == AppointmentStatus.scheduled
+                    Appointment.status == AppointmentStatus.scheduled,
                 )
                 result = await db.execute(query)
                 appointments = result.scalars().all()
@@ -65,11 +69,14 @@ class SchedulerService:
             doctor = doctor_result.scalar_one_or_none()
 
             if not patient or not doctor:
-                logger.warning(f"Could not retrieve patient or doctor for appointment ID {appointment.id}")
+                logger.warning(
+                    f"Could not retrieve patient or doctor for appointment ID {appointment.id}"
+                )
                 return
 
             logger.info(
-                f"Patient found: {patient.email if patient else 'None'}, Doctor found: {doctor.email if doctor else 'None'}")
+                f"Patient found: {patient.email if patient else 'None'}, Doctor found: {doctor.email if doctor else 'None'}"
+            )
 
             # Construct email messages
             patient_subject = "Appointment Reminder"
@@ -108,9 +115,13 @@ class SchedulerService:
 
             # Send emails
             logger.info(f"Sending email to patient: {patient.email}")
-            await self.email_service.send_email(patient.email, patient_subject, patient_body)
+            await self.email_service.send_email(
+                patient.email, patient_subject, patient_body
+            )
             logger.info(f"Sending email to doctor: {doctor.email}")
-            await self.email_service.send_email(doctor.email, doctor_subject, doctor_body)
+            await self.email_service.send_email(
+                doctor.email, doctor_subject, doctor_body
+            )
 
             logger.info(
                 f"Notifications sent for appointment ID {appointment.id} (Patient: {patient.email}, Doctor: {doctor.email})"
@@ -122,7 +133,9 @@ class SchedulerService:
 
     def start_scheduler(self):
         """Starts the APScheduler."""
-        self.scheduler.add_job(self.check_and_notify_appointments, 'cron', hour=10, minute=30)  # Run at midnight
+        self.scheduler.add_job(
+            self.check_and_notify_appointments, "cron", hour=10, minute=30
+        )  # Run at midnight
         self.scheduler.start()
         logger.info("Scheduler started...")
 
