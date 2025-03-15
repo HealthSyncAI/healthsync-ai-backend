@@ -134,7 +134,7 @@ class SchedulerService:
     def start_scheduler(self):
         """Starts the APScheduler."""
         self.scheduler.add_job(
-            self.check_and_notify_appointments, "cron", hour=10, minute=30
+            self.check_and_notify_appointments, "cron", hour=11, minute=35
         )  # Run at midnight
         self.scheduler.start()
         logger.info("Scheduler started...")

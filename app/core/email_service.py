@@ -23,12 +23,6 @@ class EmailService:
         """Send an email using SMTP with enhanced error handling."""
         try:
             logger.info(f"Preparing to send email to: {to}")
-
-            # Validate input
-            if not self._is_valid_email(to):
-                logger.error(f"Invalid email address: {to}")
-                raise ValueError(f"Invalid email address: {to}")
-
             msg = MIMEText(body)
             msg["Subject"] = subject
             msg["From"] = f"{self.from_name} <{self.from_email}>"
@@ -97,7 +91,3 @@ class EmailService:
         The HealthSync AI Team
         """
         await self.send_email(user_email, subject, body)
-
-    def _is_valid_email(self, email: str) -> bool:
-        """Basic email validation"""
-        return "@" in email and email.endswith((".com", ".org", ".net", ".edu"))
