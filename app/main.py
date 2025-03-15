@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.core.logger import setup_logging
-from app.api.routers import auth, chatbot, appointment, health_record
+from app.api.routers import auth, chatbot, appointment, health_record, statistics
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.scheduler import scheduler_service
 import logging
@@ -30,6 +30,7 @@ app.include_router(appointment.router, prefix="/api/appointment", tags=["appoint
 app.include_router(
     health_record.router, prefix="/api/health-record", tags=["health-record"]
 )
+app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"])
 
 
 # A basic health-check endpoint
