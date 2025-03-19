@@ -20,7 +20,12 @@ def verify_token(authorization: Optional[str] = Header(None)):
 
 
 @app.post("/notify")
-async def send_notification(notification_request: NotificationRequest, authorization: Optional[str] = Header(None)):
+async def send_notification(
+    notification_request: NotificationRequest,
+    authorization: Optional[str] = Header(None),
+):
     verify_token(authorization)
-    print(f"Sending notification to patient {notification_request.patient_id}: {notification_request.message}")
+    print(
+        f"Sending notification to patient {notification_request.patient_id}: {notification_request.message}"
+    )
     return {"status": "Notification sent"}

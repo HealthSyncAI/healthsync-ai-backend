@@ -24,14 +24,19 @@ def verify_token(authorization: Optional[str] = Header(None)):
 
 
 @app.post("/schedule")
-async def schedule_appointment(appointment_request: AppointmentRequest, authorization: Optional[str] = Header(None)):
+async def schedule_appointment(
+    appointment_request: AppointmentRequest, authorization: Optional[str] = Header(None)
+):
     """
     Schedules an appointment.
     """
     verify_token(authorization)
     global next_appointment_id
     appointment_id = next_appointment_id
-    appointments[appointment_id] = {"patient_id": appointment_request.patient_id, "time": appointment_request.time,
-                                    "status": "scheduled"}
+    appointments[appointment_id] = {
+        "patient_id": appointment_request.patient_id,
+        "time": appointment_request.time,
+        "status": "scheduled",
+    }
     next_appointment_id += 1
     return {"appointment_id": appointment_id}

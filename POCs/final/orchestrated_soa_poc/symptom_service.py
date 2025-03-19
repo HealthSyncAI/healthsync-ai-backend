@@ -19,7 +19,9 @@ def verify_token(authorization: Optional[str] = Header(None)):
 
 
 @app.post("/check_symptom")
-async def check_symptom(symptom_request: SymptomRequest, authorization: Optional[str] = Header(None)):
+async def check_symptom(
+    symptom_request: SymptomRequest, authorization: Optional[str] = Header(None)
+):
     """
     Provides a simplified symptom check (mocked).
     """
