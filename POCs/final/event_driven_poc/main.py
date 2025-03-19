@@ -1,17 +1,18 @@
+# main.py
 import events
-import services
 from broker import EventBroker
-
+import services
+from functools import partial  # Import partial
 
 def main():
     """Main function to run the simulation."""
     broker = EventBroker()
 
-    # Subscribe event handlers (listeners)
-    broker.subscribe(events.AppointmentRequested, services.check_doctor_availability)
-    broker.subscribe(events.DoctorAvailabilityChecked, services.schedule_appointment)
-    broker.subscribe(events.AppointmentScheduled, services.send_appointment_reminder)
-    broker.subscribe(events.AppointmentCreationFailed, services.log_appointment_creation_failed)
+    # Subscribe event handlers (listeners) using partial
+    broker.subscribe(events.AppointmentRequested, partial(services.check_doctor_availability, broker=broker))
+    broker.subscribe(events.DoctorAvailabilityChecked, partial(services.schedule_appointment, broker=broker))
+    broker.subscribe(events.AppointmentScheduled, partial(services.send_appointment_reminder, broker=broker))
+    broker.subscribe(events.AppointmentCreationFailed, partial(services.log_appointment_creation_failed, broker=broker))
 
     # Simulate a patient requesting an appointment.
     request_event = events.AppointmentRequested(
@@ -31,6 +32,7 @@ def main():
         symptoms="Headache"
     )
     broker.publish(request_event2)
+
 
 
 if __name__ == "__main__":
