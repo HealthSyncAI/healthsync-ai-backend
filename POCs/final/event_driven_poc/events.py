@@ -3,6 +3,7 @@ class Event:
 
     def __init__(self, timestamp=None):
         import datetime
+
         self.timestamp = timestamp or datetime.datetime.now()
 
 
@@ -25,13 +26,23 @@ class DoctorAvailabilityChecked(Event):
         self.request_id = request_id  # Correlation ID
         self.doctor_id = doctor_id
         self.available = available
-        self.suggested_times = [] if available else ["2024-03-16 10:00", "2024-03-16 14:00"]
+        self.suggested_times = (
+            [] if available else ["2024-03-16 10:00", "2024-03-16 14:00"]
+        )
 
 
 class AppointmentScheduled(Event):
     """Event triggered when an appointment is successfully scheduled."""
 
-    def __init__(self, request_id, appointment_id, patient_id, doctor_id, appointment_time, **kwargs):
+    def __init__(
+        self,
+        request_id,
+        appointment_id,
+        patient_id,
+        doctor_id,
+        appointment_time,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.request_id = request_id  # Correlation ID
         self.appointment_id = appointment_id

@@ -43,13 +43,19 @@ class ProcessingUnit:
         print(f"PROCESSING UNIT {self.unit_id}: Cached appointment {appointment_id}")
 
         # --- Asynchronous Data Pump (to database) ---
-        self.data_pump_queue.put({
-            "type": "update_appointment",
-            "appointment_id": appointment_id,
-            "appointment_data": appointment_data,
-        })
+        self.data_pump_queue.put(
+            {
+                "type": "update_appointment",
+                "appointment_id": appointment_id,
+                "appointment_data": appointment_data,
+            }
+        )
 
-        return {"status": "success", "appointment_id": appointment_id, "chatbot_response": chatbot_response}
+        return {
+            "status": "success",
+            "appointment_id": appointment_id,
+            "chatbot_response": chatbot_response,
+        }
 
     def simulate_chatbot(self, symptoms):
         """Simulates interaction with a chatbot."""
@@ -66,5 +72,7 @@ def data_pump_worker(data_pump_queue):
     while True:
         update_request = data_pump_queue.get()  # Blocking call
         if update_request["type"] == "update_appointment":
-            update_appointment(update_request["appointment_id"], update_request["appointment_data"])
+            update_appointment(
+                update_request["appointment_id"], update_request["appointment_data"]
+            )
         data_pump_queue.task_done()

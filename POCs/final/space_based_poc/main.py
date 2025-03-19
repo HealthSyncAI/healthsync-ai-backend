@@ -9,20 +9,39 @@ import database
 def main():
     # --- Setup ---
     data_pump_queue = queue.Queue()
-    data_pump_thread = threading.Thread(target=data_pump_worker, args=(data_pump_queue,), daemon=True)
+    data_pump_thread = threading.Thread(
+        target=data_pump_worker, args=(data_pump_queue,), daemon=True
+    )
     data_pump_thread.start()
 
     num_processing_units = 3  # Simulate multiple processing units
-    processing_units = [ProcessingUnit(i, data_pump_queue) for i in range(num_processing_units)]
+    processing_units = [
+        ProcessingUnit(i, data_pump_queue) for i in range(num_processing_units)
+    ]
 
     # --- Simulate incoming requests ---
     requests = [
-        {"type": "schedule_appointment", "patient_id": "user123", "doctor_id": "doc456",
-         "appointment_time": "2024-07-29 10:00", "symptoms": "Fever and cough"},
-        {"type": "schedule_appointment", "patient_id": "user789", "doctor_id": "doc789",
-         "appointment_time": "2024-07-30 14:00", "symptoms": "Headache"},
-        {"type": "schedule_appointment", "patient_id": "user123", "doctor_id": "doc456",
-         "appointment_time": "2024-07-29 10:00", "symptoms": "Fever and cough"},
+        {
+            "type": "schedule_appointment",
+            "patient_id": "user123",
+            "doctor_id": "doc456",
+            "appointment_time": "2024-07-29 10:00",
+            "symptoms": "Fever and cough",
+        },
+        {
+            "type": "schedule_appointment",
+            "patient_id": "user789",
+            "doctor_id": "doc789",
+            "appointment_time": "2024-07-30 14:00",
+            "symptoms": "Headache",
+        },
+        {
+            "type": "schedule_appointment",
+            "patient_id": "user123",
+            "doctor_id": "doc456",
+            "appointment_time": "2024-07-29 10:00",
+            "symptoms": "Fever and cough",
+        },
     ]
 
     def send_request(request):
