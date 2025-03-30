@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field, ConfigDict
 class SymptomRequest(BaseModel):
     symptom_text: str
 
-
     room_number: Optional[int] = None
 
 
