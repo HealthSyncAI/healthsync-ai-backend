@@ -1,4 +1,4 @@
-# File: tests/test_appointment.py
+
 
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -10,15 +10,15 @@ from app.db.database import TestAsyncSessionLocal
 from app.models.user import User, UserRole
 from app.models.appointment import Appointment, AppointmentStatus
 from app.services.auth import AuthService
-from app.services import health_record as health_record_service # To mock
+from app.services import health_record as health_record_service 
 
-# --- Dummy User & Auth Setup (Consistent with other tests) ---
+
 class DummyUser:
     def __init__(self, id, role="patient", username="dummy_user"):
         self.id = id
         self.role = role
         self.username = username
-        # Add other attributes if needed by the endpoint logic being tested
+        
         self.first_name = "Dummy"
         self.last_name = "User"
         self.email = f"{username}@example.com"
@@ -42,7 +42,7 @@ class DummyAuthService:
         DummyAuthService._current_user_username = username
 
     async def get_current_user(self, token: str = None):
-         # Use class attributes to return the currently configured dummy user
+         
         return await dummy_get_current_user_method(
             user_id=self._current_user_id,
             role=self._current_user_role,
@@ -55,21 +55,21 @@ def dummy_auth_service_provider():
     """Provides the singleton instance of the DummyAuthService."""
     return _dummy_auth_service_instance
 
-# --- Mock for health record creation during appointment ---
+
 async def mock_create_triage_record(*args, **kwargs):
     print("Mocked create_triage_record_from_chats called, doing nothing.")
     return None
 
-# --- Test Setup Data ---
+
 @pytest.fixture(scope="function")
 async def setup_users_for_appointment():
     """Creates a patient and a doctor user in the test DB."""
     async with TestAsyncSessionLocal() as session:
-        # Use distinct usernames/emails to avoid conflicts if run concurrently or reused
+        
         patient = User(
             username="appt_patient",
             email="appt_patient@example.com",
-            hashed_password="testpassword", # Irrelevant due to auth mock
+            hashed_password="testpassword", 
             role=UserRole.patient,
             first_name="Appt",
             last_name="Patient"
@@ -101,25 +101,25 @@ async def test_appointment_endpoints(setup_users_for_appointment, monkeypatch):
     Relies on the actual test DB managed by conftest.py and setup_users_for_appointment.
     Mocks authentication and the automatic triage record creation.
     """
-    # ***** CORRECTED LINE *****
+    
     user_ids = await setup_users_for_appointment
-    # *************************
+    
     patient_id = user_ids["patient_id"]
     doctor_id = user_ids["doctor_id"]
 
     original_auth_override = app.dependency_overrides.get(AuthService)
     app.dependency_overrides[AuthService] = dummy_auth_service_provider
 
-    # Mock the function that creates a health record during appointment booking
+    
     monkeypatch.setattr(health_record_service, "create_triage_record_from_chats", mock_create_triage_record)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        headers = {"Authorization": "Bearer dummy_token"} # Required, but value ignored
+        headers = {"Authorization": "Bearer dummy_token"} 
 
-        # --- Test POST /api/appointment/ (Schedule Appointment) ---
+        
         print("\n--- Testing POST /api/appointment/ ---")
-        # Set the dummy auth service to act as the patient
+        
         _dummy_auth_service_instance.set_user(patient_id, "patient", "appt_patient")
 
         appointment_payload = {
@@ -145,9 +145,9 @@ async def test_appointment_endpoints(setup_users_for_appointment, monkeypatch):
         appointment_id = response_data_post["id"]
         print(f"Appointment scheduled successfully. ID: {appointment_id}")
 
-        # --- Test GET /api/appointment/{appointment_id}/health-records ---
+        
         print(f"\n--- Testing GET /api/appointment/{appointment_id}/health-records ---")
-        # Set the dummy auth service to act as the doctor for this check
+        
         _dummy_auth_service_instance.set_user(doctor_id, "doctor", "appt_doctor")
         response_get_hr = await client.get(f"/api/appointment/{appointment_id}/health-records", headers=headers)
         print(f"GET HR Response Status: {response_get_hr.status_code}")
@@ -160,13 +160,13 @@ async def test_appointment_endpoints(setup_users_for_appointment, monkeypatch):
 
         assert response_get_hr.status_code == 200, f"Expected 200, got {response_get_hr.status_code}. Response: {response_get_hr.text}"
         assert isinstance(response_data_hr, list)
-        # We mocked the creation, so expect an empty list unless mock changes
+        
         assert len(response_data_hr) == 0, "Expected empty health records list due to mocking"
         print("Health records fetched successfully (expected empty list).")
 
-        # --- Test GET /api/appointment/doctors ---
+        
         print("\n--- Testing GET /api/appointment/doctors ---")
-        # Any authenticated user (patient or doctor) can list doctors
+        
         _dummy_auth_service_instance.set_user(patient_id, "patient", "appt_patient")
         response_get_doctors = await client.get("/api/appointment/doctors", headers=headers, params={"specialization": "Cardiology"})
         print(f"GET Doctors Response Status: {response_get_doctors.status_code}")
@@ -186,9 +186,9 @@ async def test_appointment_endpoints(setup_users_for_appointment, monkeypatch):
         assert found_doctor["first_name"] == "Appt"
         print("Doctors listed successfully.")
 
-        # --- Test GET /api/appointment/doctors/{doctor_id} ---
+        
         print(f"\n--- Testing GET /api/appointment/doctors/{doctor_id} ---")
-        # Any authenticated user can get details
+        
         response_get_doctor_detail = await client.get(f"/api/appointment/doctors/{doctor_id}", headers=headers)
         print(f"GET Doctor Detail Response Status: {response_get_doctor_detail.status_code}")
         try:
@@ -202,11 +202,11 @@ async def test_appointment_endpoints(setup_users_for_appointment, monkeypatch):
         assert response_data_doctor_detail["id"] == doctor_id
         assert response_data_doctor_detail["email"] == "appt_doctor@example.com"
         assert response_data_doctor_detail["specialization"] == "Cardiology"
-        assert "expertise_areas" in response_data_doctor_detail # Check detailed fields exist
+        assert "expertise_areas" in response_data_doctor_detail 
         assert "languages" in response_data_doctor_detail
         print("Doctor details fetched successfully.")
 
-    # Cleanup dependency overrides
+    
     if original_auth_override:
         app.dependency_overrides[AuthService] = original_auth_override
     else:
