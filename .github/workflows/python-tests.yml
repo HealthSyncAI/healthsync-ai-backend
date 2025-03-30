@@ -2,7 +2,6 @@
 
 name: Python Sequential Tests
 
-# Controls when the workflow will run
 on:
   push:
     branches: [ main ]
@@ -14,66 +13,65 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Specify the Python versions you want to test against
-        python-version: ['3.10'] # Add other versions if needed, e.g., ['3.9', '3.10', '3.11']
+        python-version: ['3.10']
 
-    # Service containers to run with the job
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image - Use a specific version consistent with local if possible
         image: postgres:15
         env:
-          POSTGRES_USER: myuser           # Updated user
-          POSTGRES_PASSWORD: mypassword   # Updated password
-          POSTGRES_DB: healthsync_db_test # Updated database name
-        # Options for the health check
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+          POSTGRES_DB: healthsync_db_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          # Maps tcp port 5432 on service container to the runner's localhost:5432
-          # The tests inside the runner connect to localhost:5432
           - 5432:5432
 
     steps:
-    #----------------------------------------------
-    # Checkout Code
-    #----------------------------------------------
     - name: Check out code
       uses: actions/checkout@v4
 
-    #----------------------------------------------
-    # Set up Python
-    #----------------------------------------------
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
-    #----------------------------------------------
-    # Install Dependencies
-    #----------------------------------------------
     - name: Install dependencies
       env:
-        # Set pip cache directory for faster builds
         PIP_CACHE_DIR: ${{ github.workspace }}/.cache/pip
       run: |
         python -m pip install --upgrade pip
+        # Ensure all necessary packages, including pydantic and test helpers, are installed
+        pip install pytest pytest-asyncio httpx sqlalchemy asyncpg pydantic pydantic-settings pytest-dotenv
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    #----------------------------------------------
-    # Run Tests Sequentially
-    #----------------------------------------------
     - name: Run tests sequentially per file
+      # ***** THIS ENV BLOCK IS CRUCIAL *****
       env:
-        # Use the credentials and DB name matching the service container
-        # The hostname is 'localhost' and port is '5432' as mapped by the service
+        # --- Database URLs ---
+        # Map the auto-generated test DB URL to BOTH variables Pydantic might expect
         TEST_DATABASE_URL: postgresql+asyncpg://myuser:mypassword@localhost:5432/healthsync_db_test
-        # Add any other environment variables your application/tests need
-        # EXAMPLE_API_KEY: ${{ secrets.EXAMPLE_API_KEY }}
+        DATABASE_TEST_URI: postgresql+asyncpg://myuser:mypassword@localhost:5432/healthsync_db_test # Map it here too!
+        # You MUST add DATABASE_URI as a GitHub Secret if your tests require it.
+        # If tests DON'T need the main DB, consider making it optional in your Pydantic Settings model for the test environment.
+        DATABASE_URI: ${{ secrets.DATABASE_URI }} # Assumes you created a secret named DATABASE_URI
+
+        # --- Secrets (Pulled from GitHub Secrets) ---
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+        OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
+        DEBUG: ${{ secrets.DEBUG }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_FROM_EMAIL: ${{ secrets.SMTP_FROM_EMAIL }}
+        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+
       run: |
         # List all test files and loop through them
         find tests -name 'test_*.py' -print0 | while IFS= read -r -d $'\0' test_file; do
