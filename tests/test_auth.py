@@ -3,14 +3,17 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.services.auth import AuthService
 
+
 # --- Dummy User Dependency for Authentication ---
 class DummyUser:
     id = 1
     username = "dummy_user"
 
+
 async def dummy_get_current_user():
     """Return a dummy user to bypass real authentication."""
     return DummyUser()
+
 
 @pytest.mark.asyncio
 async def test_registration_and_login():
@@ -32,14 +35,16 @@ async def test_registration_and_login():
             "email": "testuser_auth@example.com",
             "password": "SecretPassword123!",
             "first_name": "Test",
-            "last_name": "User"
+            "last_name": "User",
         }
         reg_response = await client.post("/api/auth/register", json=register_payload)
 
         if reg_response.status_code != 201:
             print("Registration error details:", reg_response.json())
 
-        assert reg_response.status_code == 201, f"Expected status 201, got {reg_response.status_code}"
+        assert (
+            reg_response.status_code == 201
+        ), f"Expected status 201, got {reg_response.status_code}"
         reg_data = reg_response.json()
 
         assert "access_token" in reg_data, "Registration should return an access_token"
@@ -48,16 +53,20 @@ async def test_registration_and_login():
 
         # -------------------- Test Duplicate Registration --------------------
         dup_response = await client.post("/api/auth/register", json=register_payload)
-        assert dup_response.status_code == 400, f"Expected status 400 on duplicate registration, got {dup_response.status_code}"
+        assert (
+            dup_response.status_code == 400
+        ), f"Expected status 400 on duplicate registration, got {dup_response.status_code}"
         print("Duplicate registration correctly rejected.")
 
         # -------------------- Test Login with Valid Credentials --------------------
         valid_login_data = {
             "username": register_payload["username"],
-            "password": register_payload["password"]
+            "password": register_payload["password"],
         }
         login_response = await client.post("/api/auth/login", data=valid_login_data)
-        assert login_response.status_code == 200, f"Expected status 200 on login, got {login_response.status_code}"
+        assert (
+            login_response.status_code == 200
+        ), f"Expected status 200 on login, got {login_response.status_code}"
         login_data = login_response.json()
         assert "access_token" in login_data, "Login should return an access_token"
         assert login_data.get("token_type") == "bearer", "Token type should be 'bearer'"
@@ -66,10 +75,14 @@ async def test_registration_and_login():
         # -------------------- Test Login with Invalid Credentials --------------------
         invalid_login_data = {
             "username": register_payload["username"],
-            "password": "WrongPassword!"
+            "password": "WrongPassword!",
         }
-        inv_login_response = await client.post("/api/auth/login", data=invalid_login_data)
-        assert inv_login_response.status_code == 400, f"Expected status 400 on invalid login, got {inv_login_response.status_code}"
+        inv_login_response = await client.post(
+            "/api/auth/login", data=invalid_login_data
+        )
+        assert (
+            inv_login_response.status_code == 400
+        ), f"Expected status 400 on invalid login, got {inv_login_response.status_code}"
         print("Login correctly rejected invalid credentials.")
 
     # Clean up dependency override.

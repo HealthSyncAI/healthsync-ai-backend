@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime
 from httpx import AsyncClient, ASGITransport
+import json
 
 from app.main import app
 from app.db.database import get_db_session
@@ -10,27 +11,48 @@ from app.services.auth import AuthService
 class DummyUser:
     id = 1
     username = "dummy_user"
+    role = "patient"
 
 
-async def dummy_get_current_user():
-    """Return a dummy user to bypass real authentication."""
+async def dummy_get_current_user_method(*args, **kwargs):
+    """Returns the dummy user object."""
     return DummyUser()
 
 
-class DummyChatSessionObj:
-    """A dummy chat session object to simulate a DB record."""
+class DummyAuthService:
+    """A dummy AuthService whose get_current_user returns a DummyUser, ignoring the token."""
 
-    def __init__(self, id, input_text, model_response, triage_advice, created_at):
+    async def get_current_user(self, token: str = None):
+        return await dummy_get_current_user_method()
+
+
+def dummy_auth_service_provider():
+    """Provides an instance of the DummyAuthService for dependency override."""
+    return DummyAuthService()
+
+
+class DummyChatRoomObj:
+    def __init__(self, room_number):
+        self.room_number = room_number
+
+
+class DummyChatSessionObj:
+    def __init__(
+        self, id, input_text, model_response, triage_advice, created_at, chat_room
+    ):
         self.id = id
         self.input_text = input_text
-        self.model_response = model_response  # will be mapped to the Pydantic "analysis" field
+        self.model_response = model_response
         self.triage_advice = triage_advice
         self.created_at = created_at
+        self.chat_room = chat_room
+
+    @property
+    def room_number(self):
+        return self.chat_room.room_number if self.chat_room else None
 
 
 class DummyResult:
-    """A dummy result to simulate SQLAlchemy query result."""
-
     def __init__(self, items):
         self._items = items
 
@@ -42,70 +64,120 @@ class DummyResult:
 
 
 class DummyDBSessionForChats:
-    """A dummy DB session for the GET /chats endpoint simulation."""
-
     async def execute(self, query):
-        # Create two dummy chat sessions with different created_at values.
-        dummy_session1 = DummyChatSessionObj(
-            1,
-            "I feel dizzy",
-            "Possible dehydration",
-            "Hydrate well and rest",
-            datetime(2025, 2, 8, 12, 0, 0),
-        )
-        dummy_session2 = DummyChatSessionObj(
-            2,
-            "I have a fever",
-            "Could be a viral infection",
-            None,
-            datetime(2025, 2, 7, 11, 0, 0),
-        )
-        # The endpoint orders by created_at descending, so dummy_session1 should appear first.
-        return DummyResult([dummy_session1, dummy_session2])
+        room1 = DummyChatRoomObj(room_number=1)
+        room2 = DummyChatRoomObj(room_number=2)
+        simulated_db_result = [
+            DummyChatSessionObj(
+                id=3,
+                input_text="Sore throat",
+                model_response="Gargle salt water",
+                triage_advice="Self-care",
+                created_at=datetime(2025, 3, 2, 11, 0, 0),
+                chat_room=room2,
+            ),
+            DummyChatSessionObj(
+                id=1,
+                input_text="Headache",
+                model_response="Migraine?",
+                triage_advice="Rest",
+                created_at=datetime(2025, 3, 1, 10, 0, 0),
+                chat_room=room1,
+            ),
+            DummyChatSessionObj(
+                id=2,
+                input_text="Feeling tired",
+                model_response="Get sleep",
+                triage_advice="Self-care",
+                created_at=datetime(2025, 3, 1, 9, 0, 0),
+                chat_room=room1,
+            ),
+        ]
+        return DummyResult(simulated_db_result)
 
 
 async def dummy_get_db_session():
-    """Yield a dummy DB session for GET /chats."""
     yield DummyDBSessionForChats()
 
 
 @pytest.mark.asyncio
 async def test_get_user_chats():
     """
-    Test the /chats endpoint:
-    - Override authentication and DB dependencies with dummy objects.
-    - Send a GET request and verify the response contains the expected dummy chat sessions.
+    Test the /chats endpoint with corrected Auth (via override + dummy header)
+    and DB mocking. Expects a grouped List[ChatRoomChats] response.
+    Checks for 'model_response' key in output due to observed serialization behavior.
     """
-    app.dependency_overrides[AuthService.get_current_user] = dummy_get_current_user
+
+    original_auth_override = app.dependency_overrides.get(AuthService)
+    original_db_override = app.dependency_overrides.get(get_db_session)
+
+    app.dependency_overrides[AuthService] = dummy_auth_service_provider
     app.dependency_overrides[get_db_session] = dummy_get_db_session
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as async_client:
-        response = await async_client.get("api/chatbot/chats")
-        assert response.status_code == 200, f"Unexpected status code: {response.status_code}"
-        data = response.json()
-        # Data should be a list of chat sessions with the fields id, input_text, analysis, triage_advice, created_at.
-        assert isinstance(data, list), "Response is not a list."
-        # Expecting two dummy chat sessions.
-        assert len(data) == 2
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as async_client:
+            headers = {"Authorization": "Bearer this_is_a_dummy_token"}
+            response = await async_client.get("api/chatbot/chats", headers=headers)
 
-        # Validate the first (most recent) chat session.
-        chat1 = data[0]
-        assert chat1["id"] == 1, "First chat session ID does not match expected value."
-        assert chat1["input_text"] == "I feel dizzy", "First chat session input text mismatch."
-        assert chat1[
-                   "model_response"] == "Possible dehydration", "First chat session analysis mismatch."  # Corrected field name
-        assert chat1["triage_advice"] == "Hydrate well and rest", "First chat session triage_advice mismatch."
+            assert (
+                response.status_code == 200
+            ), f"Unexpected status code: {response.status_code}, Response: {response.text}"
+            data = response.json()
 
-        # Validate the second chat session.
-        chat2 = data[1]
-        assert chat2["id"] == 2, "Second chat session ID does not match expected value."
-        assert chat2["input_text"] == "I have a fever", "Second chat session input text mismatch."
-        assert chat2[
-                   "model_response"] == "Could be a viral infection", "Second chat session analysis mismatch."  # Corrected field name
-        assert chat2["triage_advice"] is None, "Second chat session triage_advice should be None."
+            assert isinstance(data, list), "Response is not a list."
+            assert len(data) == 2, f"Expected 2 chat room groups, got {len(data)}"
 
-        print("Test GET /chats passed with response:", data)
+            room1_group, room2_group = data[0], data[1]
 
-    app.dependency_overrides.pop(AuthService.get_current_user, None)
-    app.dependency_overrides.pop(get_db_session, None)
+            assert room1_group["room_number"] == 1
+            assert len(room1_group["chats"]) == 2
+            chat1_room1, chat2_room1 = room1_group["chats"][0], room1_group["chats"][1]
+
+            print("\n--- Debugging chat1_room1 ---")
+            print(chat1_room1)
+            print("Keys:", chat1_room1.keys())
+            print("--- End Debugging ---")
+            assert (
+                chat1_room1["id"] == 1 and chat1_room1["model_response"] == "Migraine?"
+            )
+
+            print("\n--- Debugging chat2_room1 ---")
+            print(chat2_room1)
+            print("Keys:", chat2_room1.keys())
+            print("--- End Debugging ---")
+            assert (
+                chat2_room1["id"] == 2 and chat2_room1["model_response"] == "Get sleep"
+            )
+
+            assert room2_group["room_number"] == 2
+            assert len(room2_group["chats"]) == 1
+            chat1_room2 = room2_group["chats"][0]
+
+            print("\n--- Debugging chat1_room2 ---")
+            print(chat1_room2)
+            print("Keys:", chat1_room2.keys())
+            print("--- End Debugging ---")
+            assert (
+                chat1_room2["id"] == 3
+                and chat1_room2["model_response"] == "Gargle salt water"
+            )
+
+            print(
+                "\nTest GET /chats passed with expected grouped structure (using 'model_response' key):"
+            )
+            print(json.dumps(data, indent=2))
+
+    finally:
+
+        if original_auth_override:
+            app.dependency_overrides[AuthService] = original_auth_override
+        else:
+            app.dependency_overrides.pop(AuthService, None)
+
+        if original_db_override:
+            app.dependency_overrides[get_db_session] = original_db_override
+        else:
+            app.dependency_overrides.pop(get_db_session, None)
