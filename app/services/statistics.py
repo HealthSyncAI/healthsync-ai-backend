@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 async def generate_usage_statistics(db: AsyncSession) -> UsageStatistics:
     """Generate usage statistics for the platform."""
     try:
-        # User counts
+
         total_users = await db.scalar(select(func.count()).select_from(User))
         total_doctors = await db.scalar(
             select(func.count()).select_from(User).where(User.role == UserRole.doctor)
@@ -23,17 +23,14 @@ async def generate_usage_statistics(db: AsyncSession) -> UsageStatistics:
             select(func.count()).select_from(User).where(User.role == UserRole.patient)
         )
 
-        # Appointment counts
         total_appointments = await db.scalar(
             select(func.count()).select_from(Appointment)
         )
 
-        # Chat session counts
         total_chat_sessions = await db.scalar(
             select(func.count()).select_from(ChatSession)
         )
 
-        # Health record counts
         total_health_records = await db.scalar(
             select(func.count()).select_from(HealthRecord)
         )

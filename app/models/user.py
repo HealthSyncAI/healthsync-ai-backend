@@ -31,25 +31,17 @@ class User(Base):
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
 
-    # Basic health information
     date_of_birth = Column(Date, nullable=True)
     gender = Column(Enum(Gender), nullable=True)
-    height_cm = Column(Float, nullable=True)  # Height in centimeters
-    weight_kg = Column(Float, nullable=True)  # Weight in kilograms
-    blood_type = Column(String(5), nullable=True)  # e.g., A+, O-, AB+
-    allergies = Column(
-        String(255), nullable=True
-    )  # Comma-separated list, or could be a separate table
-    existing_conditions = Column(
-        String(255), nullable=True
-    )  # Comma-separated, or separate table
+    height_cm = Column(Float, nullable=True)
+    weight_kg = Column(Float, nullable=True)
+    blood_type = Column(String(5), nullable=True)
+    allergies = Column(String(255), nullable=True)
+    existing_conditions = Column(String(255), nullable=True)
 
-    # Doctor-specific details (nullable for non-doctors)
     specialization = Column(String(100), nullable=True)
     qualifications = Column(String(200), nullable=True)
-    is_available = Column(
-        Boolean, default=True
-    )  # Indicates if the doctor is available for appointments.
+    is_available = Column(Boolean, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -59,15 +51,12 @@ class User(Base):
     def __repr__(self):
         return f"<User {self.username} ({self.role.value})>"
 
-        # app/models/user.py
-        # Add these properties to the existing User class
-
     @property
     def years_experience(self):
-        # For now, we'll return a dummy value based on user ID to simulate variation
+
         if self.role != UserRole.doctor:
             return None
-        return (self.id * 3) % 15 + 1  # 1-15 years of experience
+        return (self.id * 3) % 15 + 1
 
     @property
     def bio(self):
@@ -80,14 +69,14 @@ class User(Base):
     def rating(self):
         if self.role != UserRole.doctor:
             return None
-        # Generate a rating between 4.0 and 5.0
+
         return 4.0 + ((self.id % 10) / 10)
 
     @property
     def expertise_areas(self):
         if not self.specialization or self.role != UserRole.doctor:
             return []
-        # Generate some expertise areas based on specialization
+
         base_expertise = self.specialization.split(", ")
         if "Cardiology" in self.specialization:
             return base_expertise + ["Heart Disease", "Hypertension Management"]
@@ -97,5 +86,5 @@ class User(Base):
 
     @property
     def languages(self):
-        # Default languages for all doctors
+
         return ["English", "Spanish"] if self.role == UserRole.doctor else []

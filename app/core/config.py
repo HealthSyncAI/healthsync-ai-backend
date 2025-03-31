@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     open_router_api_key: str = Field(..., alias="OPEN_ROUTER_API_KEY")
 
-    # SMTP settings
     SMTP_SERVER: str = Field(..., alias="SMTP_SERVER")
     SMTP_PORT: int = Field(587, alias="SMTP_PORT")
     SMTP_USERNAME: str = Field(..., alias="SMTP_USERNAME")

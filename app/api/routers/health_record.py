@@ -30,7 +30,6 @@ async def add_health_record(
     """Create a new health record. Only doctors can create records directly."""
     current_user = await auth_service.get_current_user(token)
 
-    # Verify permission (only doctors can create records directly)
     if current_user.role != UserRole.doctor and current_user.id != record.patient_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -52,14 +51,12 @@ async def add_doctor_note(
     """Create a new doctor's note for a patient."""
     current_user = await auth_service.get_current_user(token)
 
-    # Verify this is a doctor
     if current_user.role != UserRole.doctor:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only doctors can create medical notes",
         )
 
-    # Convert to HealthRecordCreate
     health_record = HealthRecordCreate(
         title=record.title,
         summary=record.summary,
@@ -86,7 +83,6 @@ async def get_patient_records(
     """Get all health records for a specific patient."""
     current_user = await auth_service.get_current_user(token)
 
-    # Check permissions (only the patient or their doctor can access)
     if current_user.id != patient_id and current_user.role != UserRole.doctor:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -108,7 +104,6 @@ async def get_record(
 
     record = await get_health_record_by_id(db, record_id)
 
-    # Check permissions (only the patient or their doctor can access)
     if current_user.id != record.patient_id and current_user.role != UserRole.doctor:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

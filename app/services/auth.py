@@ -58,7 +58,6 @@ class AuthService:
         await db_session.commit()
         await db_session.refresh(new_user)
 
-        # Send welcome email
         await self.email_service.send_registration_email(
             user_email=new_user.email, username=new_user.username
         )

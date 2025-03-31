@@ -4,7 +4,6 @@ from sqlalchemy import text
 from app.db.database import test_engine, Base, get_db_session, get_test_db_session
 import app
 
-# Check that the test database URL contains "test"
 db_url = str(test_engine.url)
 if "test" not in db_url.lower():
     raise Exception(
@@ -26,12 +25,9 @@ def override_db_dependency():
     with the test DB dependency (get_test_db_session) for the test session.
     After tests finish, revert to the original dependency.
     """
-    # Save any existing override for get_db_session
     original = app.app.dependency_overrides.get(get_db_session)
-    # Set the override to use the test DB session dependency
     app.app.dependency_overrides[get_db_session] = get_test_db_session
     yield
-    # Cleanup: restore the original dependency (or remove override if none)
     if original is not None:
         app.app.dependency_overrides[get_db_session] = original
     else:

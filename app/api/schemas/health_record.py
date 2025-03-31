@@ -6,7 +6,7 @@ from app.models.health_record import RecordType
 
 class SymptomItem(BaseModel):
     name: str
-    severity: Optional[int] = None  # 1-10 scale
+    severity: Optional[int] = None
     duration: Optional[str] = None
     description: Optional[str] = None
 

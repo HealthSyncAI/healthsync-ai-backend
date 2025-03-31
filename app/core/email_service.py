@@ -36,7 +36,7 @@ class EmailService:
             try:
                 with smtplib.SMTP(
                     self.smtp_server, self.smtp_port, timeout=10
-                ) as server:  # added timeout
+                ) as server:
                     logger.info("SMTP connection established")
                     server.starttls()
                     logger.info("TLS started")

@@ -70,16 +70,14 @@ async def get_patient_health_records(
     try:
         query = select(HealthRecord).where(HealthRecord.patient_id == patient_id)
 
-        # Filter by record type if provided
         if record_type:
             try:
                 record_type_enum = RecordType(record_type)
                 query = query.where(HealthRecord.record_type == record_type_enum)
             except ValueError:
-                # Invalid record type - ignore filter
+
                 pass
 
-        # Order by created date, newest first
         query = query.order_by(HealthRecord.created_at.desc())
 
         result = await db.execute(query)
@@ -112,12 +110,12 @@ async def create_triage_record_from_chats(
 ) -> Optional[HealthRecord]:
     """Create a triage health record based on patient's chat history."""
     try:
-        # Get the patient's recent chat sessions
+
         query = (
             select(ChatSession)
             .where(ChatSession.patient_id == patient_id)
             .order_by(ChatSession.created_at.desc())
-            .limit(10)  # Get the 10 most recent chats
+            .limit(10)
         )
         result = await db.execute(query)
         chat_sessions = result.scalars().all()
@@ -126,7 +124,6 @@ async def create_triage_record_from_chats(
             logger.info(f"No chat sessions found for patient {patient_id}")
             return None
 
-        # Combine the chat history for analysis
         combined_text = "\n".join(
             [
                 f"Patient: {chat.input_text}\nAI: {chat.model_response}"
@@ -135,22 +132,19 @@ async def create_triage_record_from_chats(
             ]
         )
 
-        # Extract structured symptoms from the combined chat
         from app.ai.chatbot import extract_symptoms
 
         symptoms_extraction = await extract_symptoms(combined_text)
 
-        # Get the most recent triage advice
         most_recent_triage = None
         for chat in chat_sessions:
             if chat.triage_advice:
                 most_recent_triage = chat.triage_advice
                 break
 
-        # Create a preliminary health record
         health_record = HealthRecord(
             patient_id=patient_id,
-            doctor_id=doctor_id,  # May be None for now, doctor will be assigned later
+            doctor_id=doctor_id,
             record_type=RecordType.at_triage,
             title=f"Pre-appointment Assessment - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             summary=f"Summary of recent patient chat interactions. Latest triage: {most_recent_triage}",

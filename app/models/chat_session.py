@@ -31,5 +31,5 @@ class ChatSession(Base):
 
     @property
     def room_number(self):
-        # Expose the room number from the associated chat room
+
         return self.chat_room.room_number if self.chat_room else None

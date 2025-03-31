@@ -4,7 +4,6 @@ from app.main import app
 from app.services.auth import AuthService
 
 
-# --- Dummy User Dependency for Authentication ---
 class DummyUser:
     id = 1
     username = "dummy_user"
@@ -24,12 +23,12 @@ async def test_registration_and_login():
     - Successfully log in with valid credentials.
     - Reject login attempts with invalid credentials.
     """
-    # Override the get_current_user dependency to always return DummyUser.
+
     app.dependency_overrides[AuthService.get_current_user] = dummy_get_current_user
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        # -------------------- Test Registration --------------------
+
         register_payload = {
             "username": "testuser_auth",
             "email": "testuser_auth@example.com",
@@ -51,14 +50,12 @@ async def test_registration_and_login():
         assert reg_data.get("token_type") == "bearer", "Token type should be 'bearer'"
         print("Registration successful for user: testuser_auth.")
 
-        # -------------------- Test Duplicate Registration --------------------
         dup_response = await client.post("/api/auth/register", json=register_payload)
         assert (
             dup_response.status_code == 400
         ), f"Expected status 400 on duplicate registration, got {dup_response.status_code}"
         print("Duplicate registration correctly rejected.")
 
-        # -------------------- Test Login with Valid Credentials --------------------
         valid_login_data = {
             "username": register_payload["username"],
             "password": register_payload["password"],
@@ -72,7 +69,6 @@ async def test_registration_and_login():
         assert login_data.get("token_type") == "bearer", "Token type should be 'bearer'"
         print("Login successful with valid credentials.")
 
-        # -------------------- Test Login with Invalid Credentials --------------------
         invalid_login_data = {
             "username": register_payload["username"],
             "password": "WrongPassword!",
@@ -85,5 +81,4 @@ async def test_registration_and_login():
         ), f"Expected status 400 on invalid login, got {inv_login_response.status_code}"
         print("Login correctly rejected invalid credentials.")
 
-    # Clean up dependency override.
     app.dependency_overrides.pop(AuthService.get_current_user, None)

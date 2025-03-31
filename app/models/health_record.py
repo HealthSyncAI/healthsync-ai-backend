@@ -28,24 +28,19 @@ class HealthRecord(Base):
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     chat_session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True)
 
-    # Record type to differentiate different kinds of records
     record_type = Column(Enum(RecordType), nullable=False)
 
-    # Basic content
     title = Column(String(200), nullable=False)
     summary = Column(Text, nullable=True)
 
-    # Structured data
-    symptoms = Column(JSON, nullable=True)  # Array of symptoms with severity
-    diagnosis = Column(JSON, nullable=True)  # Can include ICD-10 codes
+    symptoms = Column(JSON, nullable=True)
+    diagnosis = Column(JSON, nullable=True)
     treatment_plan = Column(JSON, nullable=True)
     medication = Column(JSON, nullable=True)
 
-    # For chatbot-generated records
     triage_recommendation = Column(String(50), nullable=True)
-    confidence_score = Column(Float, nullable=True)  # 0-1 confidence in triage
+    confidence_score = Column(Float, nullable=True)
 
-    # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

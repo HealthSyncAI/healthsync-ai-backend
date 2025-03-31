@@ -56,7 +56,6 @@ class SchedulerService:
         try:
             logger.info(f"Starting notification for appointment ID {appointment.id}")
 
-            # Fetch patient and doctor details
             patient_query = select(User).where(User.id == appointment.patient_id)
             doctor_query = select(User).where(User.id == appointment.doctor_id)
 
@@ -78,7 +77,6 @@ class SchedulerService:
                 f"Patient found: {patient.email if patient else 'None'}, Doctor found: {doctor.email if doctor else 'None'}"
             )
 
-            # Construct email messages
             patient_subject = "Appointment Reminder"
             patient_body = f"""
             Dear {patient.first_name or patient.username},
@@ -113,7 +111,6 @@ class SchedulerService:
             HealthSync AI Team
             """
 
-            # Send emails
             logger.info(f"Sending email to patient: {patient.email}")
             await self.email_service.send_email(
                 patient.email, patient_subject, patient_body
@@ -135,7 +132,7 @@ class SchedulerService:
         """Starts the APScheduler."""
         self.scheduler.add_job(
             self.check_and_notify_appointments, "cron", hour=11, minute=35
-        )  # Run at midnight
+        )
         self.scheduler.start()
         logger.info("Scheduler started...")
 

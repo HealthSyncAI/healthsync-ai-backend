@@ -1,7 +1,6 @@
-import json
 import asyncio
+import json
 import logging
-from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 from fastapi import HTTPException, status
@@ -18,9 +17,8 @@ from app.api.schemas.chatbot import (
     ChatRoomChats,
 )
 from app.core.config import settings
-from app.models.chat_session import ChatSession
 from app.models.chat_room import ChatRoom
-from app.models.health_record import HealthRecord, RecordType
+from app.models.chat_session import ChatSession
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +26,7 @@ client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=settings.open_router_api_key,
 )
+
 
 # --- Data Models (for Pipeline Stages) ---
 
@@ -151,7 +150,6 @@ async def save_chat_session(
 ) -> Optional[ChatSession]:
     """Consumer: Saves the chat session (and creates/uses a chat room) in the database."""
     try:
-        # Determine (or create) the chat room.
         if preprocessed_input.room_number is not None:
             query = select(ChatRoom).where(
                 ChatRoom.patient_id == preprocessed_input.user_id,
@@ -215,7 +213,6 @@ async def analyze_symptoms_pipeline(
 
     triage_advice = await generate_triage_advice(llm_response)
 
-    # Save chat session (just store the chat, no health record creation)
     await save_chat_session(db, preprocessed_input, llm_response, triage_advice)
 
     return ChatbotResponse(
@@ -242,9 +239,7 @@ async def get_user_chats_service(current_user, db: AsyncSession):
 
         room_groups = {}
         for session in chat_sessions:
-            rn = (
-                session.room_number
-            )  # Exposes the room number from the eagerly loaded ChatRoom
+            rn = session.room_number
             if rn not in room_groups:
                 room_groups[rn] = []
             room_groups[rn].append(ChatSessionOut.from_orm(session))
@@ -293,7 +288,6 @@ async def extract_symptoms(symptom_text: str) -> SymptomExtraction:
         )
 
         extraction_text = model_response.choices[0].message.content
-        # Parse JSON response
         try:
             extraction_data = json.loads(extraction_text)
             return SymptomExtraction(

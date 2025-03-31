@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# Initialize the password hashing context with bcrypt
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -52,5 +52,5 @@ def decode_access_token(token: str) -> dict:
         )
         return payload
     except PyJWTError:
-        # In production, log the exception details securely.
+
         return None
