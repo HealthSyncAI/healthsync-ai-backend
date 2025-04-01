@@ -69,7 +69,7 @@ class AuthService:
             data={"sub": str(new_user.id)}, expires_delta=access_token_expires
         )
 
-        return Token(access_token=access_token, token_type="bearer")
+        return Token(access_token=access_token, token_type="bearer", user_id=new_user.id)
 
     async def login_user(
         self, form_data: OAuth2PasswordRequestForm, db_session: AsyncSession
@@ -94,7 +94,7 @@ class AuthService:
             data={"sub": str(user.id)}, expires_delta=access_token_expires
         )
 
-        return Token(access_token=access_token, token_type="bearer")
+        return Token(access_token=access_token, token_type="bearer", user_id=user.id)
 
     async def get_current_user(
         self, token: str = Depends(oauth2_scheme)
