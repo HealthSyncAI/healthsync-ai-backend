@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -55,6 +56,41 @@ async def schedule_appointment(
     await create_triage_record_from_chats(db, current_user.id, payload.doctor_id)
 
     return new_appointment
+
+
+@router.get(
+    "/my-appointments",
+    response_model=List[AppointmentResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get all appointments for the current user (patient or doctor)",
+    description="Retrieves a list of all appointments associated with the currently authenticated user, "
+    "regardless of whether they are the patient or the doctor in the appointment.",
+)
+async def get_my_appointments(
+    auth_service: AuthService = Depends(AuthService),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Retrieves all appointments linked to the current authenticated user's ID,
+    covering both cases where the user is the patient and where the user is the doctor.
+    """
+    current_user: User = await auth_service.get_current_user(token)
+
+    query = (
+        select(Appointment)
+        .where(
+            or_(
+                Appointment.patient_id == current_user.id,
+                Appointment.doctor_id == current_user.id,
+            )
+        )
+        .order_by(Appointment.start_time.desc())
+    )
+
+    result = await db.execute(query)
+    appointments = result.scalars().all()
+    return appointments
 
 
 @router.get("/{appointment_id}/health-records", response_model=List[HealthRecordOut])
