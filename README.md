@@ -62,10 +62,13 @@ To explore the API, visit the
 ### 5. Run the Tests (Optional)
 You can run the tests using Pytest. For example:
 ```angular2html
-pytest -v tests/test_get_chatbot.py
-pytest -v tests/test_post_chatbot.py
+pytest -v tests/test_appointment.py
 pytest -v tests/test_auth.py
 pytest -v tests/test_crud_schema.py
+pytest -v tests/test_get_chatbot.py
+pytest -v tests/test_health_record
+pytest -v tests/test_post_chatbot.py
+pytest -v tests/test_statistics.py
 ```
 
 Make sure your environment variables (e.g., in the .env file) are properly configured.

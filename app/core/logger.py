@@ -1,13 +1,20 @@
 import logging
+import sys
 
 
 def setup_logging():
     """
     Configures logging for the application.
-    In a production setup, you might integrate with external logging aggregators.
+    Outputs logs to standard output. Includes timestamp, level, logger name, and message.
+    In a production setup, consider using structured logging (e.g., JSON) and
+    integrating with external logging aggregators (like Datadog, Splunk, ELK stack).
     """
+    log_format = "%(asctime)s [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s"
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        level=logging.INFO,
+        format=log_format,
+        handlers=[logging.StreamHandler(sys.stdout)]
     )
+
     logger = logging.getLogger(__name__)
-    logger.info("Logging is set up!")
+    logger.info("Logging configured with format: %s", log_format)
