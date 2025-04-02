@@ -3,7 +3,14 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth, chatbot, appointment, health_record, statistics, health
+from app.api.routers import (
+    auth,
+    chatbot,
+    appointment,
+    health_record,
+    statistics,
+    health,
+)
 from app.core.logger import setup_logging
 from app.core.scheduler import scheduler_service
 
@@ -14,20 +21,21 @@ app = FastAPI(
     title="HealthSync AI",
     description="A production-ready healthcare application backend.",
     version="1.0.0",
-
     openapi_tags=[
         {"name": "auth", "description": "Authentication operations."},
         {"name": "chatbot", "description": "AI Chatbot interactions."},
-        {"name": "appointment", "description": "Manage appointments and doctor listings."},
+        {
+            "name": "appointment",
+            "description": "Manage appointments and doctor listings.",
+        },
         {"name": "health-record", "description": "Manage patient health records."},
         {"name": "statistics", "description": "Usage statistics."},
         {"name": "health", "description": "Application health checks."},
-    ]
+    ],
 )
 
 app.add_middleware(
     CORSMiddleware,
-
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -46,7 +54,9 @@ app.include_router(statistics.router, prefix="/api/statistics", tags=["statistic
 
 @app.get("/", include_in_schema=False)
 async def read_root():
-    return {"message": "Welcome to HealthSync AI Backend. Visit /docs for API documentation."}
+    return {
+        "message": "Welcome to HealthSync AI Backend. Visit /docs for API documentation."
+    }
 
 
 @app.on_event("startup")

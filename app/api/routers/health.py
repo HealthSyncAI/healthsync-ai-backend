@@ -28,10 +28,18 @@ class HealthStatus:
         self.details[key] = value
 
     def get_response(self) -> dict:
-        return {"status": self.status, "database_connected": self.database_connected, "details": self.details}
+        return {
+            "status": self.status,
+            "database_connected": self.database_connected,
+            "details": self.details,
+        }
 
     def get_http_status(self) -> int:
-        return status.HTTP_200_OK if self.status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
+        return (
+            status.HTTP_200_OK
+            if self.status == "ok"
+            else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
 
 @router.get(
@@ -39,7 +47,6 @@ class HealthStatus:
     tags=["health"],
     summary="Perform a health check",
     response_description="Returns the health status of the application",
-
 )
 async def health_check(db: AsyncSession = Depends(get_db_session)):
     """
@@ -64,6 +71,8 @@ async def health_check(db: AsyncSession = Depends(get_db_session)):
     http_status_code = health.get_http_status()
 
     if http_status_code != status.HTTP_200_OK:
-        logger.warning(f"Health check returning 200 OK, but internal status is '{health.status}'")
+        logger.warning(
+            f"Health check returning 200 OK, but internal status is '{health.status}'"
+        )
 
     return response_body

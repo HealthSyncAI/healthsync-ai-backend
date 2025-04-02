@@ -28,9 +28,6 @@ client = OpenAI(
 )
 
 
-# --- Data Models (for Pipeline Stages) ---
-
-
 class PreprocessedInput(BaseModel):
     original_text: str
     clean_text: str
@@ -58,9 +55,6 @@ class PipelineOutput(BaseModel):
 class SymptomExtraction(BaseModel):
     symptoms: List[Dict[str, Any]]
     confidence_score: float
-
-
-# --- Pipeline Stages (Functions) ---
 
 
 def preprocess_input(payload: SymptomRequest, current_user) -> PreprocessedInput:
@@ -149,7 +143,10 @@ async def save_chat_session(
     triage_advice: Optional[str],
 ) -> Optional[ChatSession]:
     """Consumer: Saves the chat session (and creates/uses a chat room) in the database."""
+    chat_room = None
+    chat_session = None
     try:
+
         if preprocessed_input.room_number is not None:
             query = select(ChatRoom).where(
                 ChatRoom.patient_id == preprocessed_input.user_id,
@@ -163,7 +160,7 @@ async def save_chat_session(
                     room_number=preprocessed_input.room_number,
                 )
                 db.add(chat_room)
-                await db.commit()
+                await db.flush()
                 await db.refresh(chat_room)
         else:
             query = select(func.max(ChatRoom.room_number)).where(
@@ -176,7 +173,7 @@ async def save_chat_session(
                 patient_id=preprocessed_input.user_id, room_number=new_room_number
             )
             db.add(chat_room)
-            await db.commit()
+            await db.flush()
             await db.refresh(chat_room)
 
         chat_session = ChatSession(
@@ -189,6 +186,7 @@ async def save_chat_session(
         db.add(chat_session)
         await db.commit()
         await db.refresh(chat_session)
+
         logger.info(
             f"Chat session recorded for user {preprocessed_input.user_id} (session id: {chat_session.id}, "
             f"chat room: {chat_room.room_number})"
@@ -198,6 +196,7 @@ async def save_chat_session(
         logger.error(
             f"Error saving chat session for user {preprocessed_input.user_id}: {exc}"
         )
+        await db.rollback()
         return None
 
 
@@ -213,7 +212,11 @@ async def analyze_symptoms_pipeline(
 
     triage_advice = await generate_triage_advice(llm_response)
 
-    await save_chat_session(db, preprocessed_input, llm_response, triage_advice)
+    saved_session = await save_chat_session(
+        db, preprocessed_input, llm_response, triage_advice
+    )
+    if saved_session is None:
+        raise HTTPException(status_code=500, detail="Failed to save chat session.")
 
     return ChatbotResponse(
         input_text=preprocessed_input.original_text,
@@ -229,9 +232,7 @@ async def get_user_chats_service(current_user, db: AsyncSession):
         query = (
             select(ChatSession)
             .filter(ChatSession.patient_id == current_user.id)
-            .options(
-                selectinload(ChatSession.chat_room)
-            )  # Eagerly load the chat_room relation
+            .options(selectinload(ChatSession.chat_room))
             .order_by(ChatSession.created_at.desc())
         )
         result = await db.execute(query)
@@ -239,10 +240,16 @@ async def get_user_chats_service(current_user, db: AsyncSession):
 
         room_groups = {}
         for session in chat_sessions:
+
             rn = session.room_number
-            if rn not in room_groups:
-                room_groups[rn] = []
-            room_groups[rn].append(ChatSessionOut.from_orm(session))
+            if rn is not None:
+                if rn not in room_groups:
+                    room_groups[rn] = []
+                room_groups[rn].append(ChatSessionOut.from_orm(session))
+            else:
+                logger.warning(
+                    f"Chat session ID {session.id} has no associated room number."
+                )
 
         grouped_chats = [
             ChatRoomChats(room_number=rn, chats=room_groups[rn])
@@ -253,6 +260,7 @@ async def get_user_chats_service(current_user, db: AsyncSession):
         logger.error(
             f"Error retrieving chat sessions for user {current_user.username}: {exc}"
         )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while retrieving chat sessions.",
@@ -290,14 +298,25 @@ async def extract_symptoms(symptom_text: str) -> SymptomExtraction:
         extraction_text = model_response.choices[0].message.content
         try:
             extraction_data = json.loads(extraction_text)
+
+            symptoms = extraction_data.get("symptoms", [])
+            confidence = extraction_data.get("confidence_score", 0.5)
+            if not isinstance(symptoms, list):
+                logger.error(f"Invalid 'symptoms' format in extraction: {symptoms}")
+                symptoms = []
+            if not isinstance(confidence, (float, int)):
+                logger.error(
+                    f"Invalid 'confidence_score' format in extraction: {confidence}"
+                )
+                confidence = 0.0
             return SymptomExtraction(
-                symptoms=extraction_data.get("symptoms", []),
-                confidence_score=extraction_data.get("confidence_score", 0.5),
+                symptoms=symptoms,
+                confidence_score=float(confidence),
             )
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse symptom extraction: {extraction_text}")
+            logger.error(f"Failed to parse symptom extraction JSON: {extraction_text}")
             return SymptomExtraction(symptoms=[], confidence_score=0.0)
 
     except Exception as exc:
-        logger.error(f"Error in symptom extraction: {exc}")
+        logger.error(f"Error in symptom extraction LLM call: {exc}")
         return SymptomExtraction(symptoms=[], confidence_score=0.0)
