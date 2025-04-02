@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pydantic import BaseModel
 from app.api.schemas.health_record import (
     HealthRecordCreate,
     SymptomItem,
