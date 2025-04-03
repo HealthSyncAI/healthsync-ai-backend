@@ -19,3 +19,4 @@ apscheduler
 mailjet_rest
 locust
 semgrep
+alembic
