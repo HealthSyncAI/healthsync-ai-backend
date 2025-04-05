@@ -1,38 +1,38 @@
-# alembic/env.py
+
 import os
 import sys
 from logging.config import fileConfig
-import asyncio # Needed for async engine inspection if used directly (not here)
+import asyncio
 
 from alembic import context
 from sqlalchemy import create_engine, pool
-from sqlalchemy.ext.asyncio import create_async_engine # Keep if needed elsewhere, but Alembic needs sync
+from sqlalchemy.ext.asyncio import create_async_engine
 
-# Add project root to Python path to allow importing 'app'
+
 project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_dir)
 
-# --- Import your project's settings and Base ---
-from app.core.config import settings # Your project's configuration
-from app.db.database import Base     # Your project's declarative base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+from app.core.config import settings
+from app.db.database import Base
+
+
+
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
+
+
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+
+
+
+
 
 
 def get_sync_database_url():
@@ -41,13 +41,13 @@ def get_sync_database_url():
     if not async_db_url:
         raise ValueError("DATABASE_URI is not set in the configuration.")
 
-    # Convert async URL to sync URL for Alembic
+
     if '+asyncpg' in async_db_url:
-        # Replace asyncpg driver with psycopg2 (or just remove driver for default)
-        sync_db_url = async_db_url.replace('+asyncpg', '') # Or '+psycopg2' if preferred
-        # Alternative: sync_db_url = async_db_url.replace('postgresql+asyncpg', 'postgresql')
+
+        sync_db_url = async_db_url.replace('+asyncpg', '')
+
     elif async_db_url.startswith('postgresql://'):
-        # Assume it's already usable or doesn't specify an async driver
+
         sync_db_url = async_db_url
     else:
         print(
@@ -70,7 +70,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_sync_database_url() # Use our function to get the URL
+    url = get_sync_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -89,18 +89,18 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    sync_db_url = get_sync_database_url() # Use our function to get the URL
+    sync_db_url = get_sync_database_url()
 
     connectable = create_engine(
         sync_db_url,
-        poolclass=pool.NullPool # Use NullPool for migration engine
+        poolclass=pool.NullPool
     )
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            # compare_type=True, # Uncomment if you need subtle type comparisons
+
         )
 
         with context.begin_transaction():

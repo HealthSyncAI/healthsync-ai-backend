@@ -3,9 +3,9 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-# Mock Hugging Face API endpoint (replace with your actual endpoint)
+
 HUGGING_FACE_API_URL = "https://your-huggingface-endpoint"
-HUGGING_FACE_API_KEY = "your_api_key"  # Best practice: use environment variables
+HUGGING_FACE_API_KEY = "your_api_key"
 
 
 async def call_huggingface_api(prompt: str):
@@ -33,11 +33,11 @@ async def ask_chatbot(question: dict):
     if not user_question:
         raise HTTPException(status_code=400, detail="Question is required")
 
-    # Mocked response for brevity. In reality, call Hugging Face.
-    # chatbot_response = await call_huggingface_api(user_question) #Uncomment to use hugging face api
+
+
     chatbot_response = {
         "generated_text": f"Mock response for: {user_question}"
-    }  # Mock response
+    }
 
     return {"response": chatbot_response}
 
