@@ -17,6 +17,12 @@ from app.core.scheduler import scheduler_service
 setup_logging()
 logger = logging.getLogger(__name__)
 
+origins = [
+    "https://healthsync-ai-frontend.vercel.app",
+    "http://localhost",
+    "http://localhost:8000",
+]
+
 app = FastAPI(
     title="HealthSync AI",
     description="A production-ready healthcare application backend.",
@@ -36,7 +42,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
