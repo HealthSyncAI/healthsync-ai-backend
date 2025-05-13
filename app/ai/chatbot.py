@@ -4,7 +4,7 @@ import logging
 from typing import Optional, List, Dict, Any
 
 from fastapi import HTTPException, status
-from openai import OpenAI
+from openai import OpenAI # OpenAI library is used for Requesty.ai as well
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,15 +16,16 @@ from app.api.schemas.chatbot import (
     ChatSessionOut,
     ChatRoomChats,
 )
-from app.core.config import settings
+from app.core.config import settings # Import settings
 from app.models.chat_room import ChatRoom
 from app.models.chat_session import ChatSession
 
 logger = logging.getLogger(__name__)
 
+# Configure the client to use Requesty.ai
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=settings.open_router_api_key,
+    base_url=settings.requesty_router_base_url,
+    api_key=settings.requesty_api_key,          # Use Requesty.ai API ke
 )
 
 
@@ -74,6 +75,7 @@ async def generate_llm_response(preprocessed_input: PreprocessedInput) -> LLMRes
     The system prompt instructs the model to assume a doctor persona and to begin its answer with a specific
     keyword (TRIAGE_IMMEDIATE, TRIAGE_SCHEDULE, or TRIAGE_SELF_CARE) to denote the triage outcome.
     """
+    model_response_obj = None
     try:
         loop = asyncio.get_running_loop()
         messages = [
@@ -92,21 +94,65 @@ async def generate_llm_response(preprocessed_input: PreprocessedInput) -> LLMRes
             },
             {"role": "user", "content": preprocessed_input.clean_text},
         ]
-        model_response = await loop.run_in_executor(
+        
+        logger.info(f"Sending request to LLM (model: {settings.requesty_model_name}) with user content: '{preprocessed_input.clean_text}'")
+        model_response_obj = await loop.run_in_executor(
             None,
             lambda: client.chat.completions.create(
-                model="google/gemini-2.0-flash-exp:free",
+                model=settings.requesty_model_name, # Use model from settings
                 messages=messages,
+                max_tokens=settings.requesty_max_output_tokens, # Add max_tokens
             ),
         )
-        analysis_text = model_response.choices[0].message.content
-        return LLMResponse(raw_response=str(model_response), analysis=analysis_text)
+        
+        raw_response_str = ""
+        if model_response_obj:
+            if hasattr(model_response_obj, 'model_dump_json'):
+                raw_response_str = model_response_obj.model_dump_json(indent=2)
+                logger.info(f"Raw LLM response object (JSON):\n{raw_response_str}")
+            else:
+                raw_response_str = str(model_response_obj)
+                logger.info(f"Raw LLM response object (str):\n{raw_response_str}")
+        else:
+            logger.error("LLM response object (model_response_obj) is None after API call.")
+            raise ValueError("Received no response object from LLM API call.")
 
-    except Exception as exc:
-        logger.error(f"Error generating model response: {exc}")
+        analysis_text = None
+        if model_response_obj and model_response_obj.choices and len(model_response_obj.choices) > 0:
+            first_choice = model_response_obj.choices[0]
+            if first_choice and first_choice.message:
+                analysis_text = first_choice.message.content
+        
+        if analysis_text is None:
+            logger.error(f"Could not extract analysis_text from LLM response. Full response captured above.")
+            raise ValueError("Failed to extract content from LLM response. The response structure might be unexpected or content missing.")
+
+        logger.info(f"Extracted analysis_text (first 200 chars): {analysis_text[:200]}...")
+        return LLMResponse(raw_response=raw_response_str, analysis=analysis_text)
+
+    except ValueError as ve: 
+        logger.error(f"ValueError during LLM response processing: {ve}")
+        problematic_response_info = ""
+        if 'raw_response_str' in locals() and raw_response_str:
+             problematic_response_info = f" Problematic response: {raw_response_str[:500]}..."
+        elif model_response_obj:
+             problematic_response_info = f" Problematic model_response_obj (str): {str(model_response_obj)[:500]}..."
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI service response was malformed or incomplete.{problematic_response_info}",
+        )
+    except Exception as exc: 
+        logger.error(f"Error generating model response: {exc}", exc_info=True) 
+        problematic_response_info = "model_response_obj was not available or None at time of exception."
+        if model_response_obj: 
+            if hasattr(model_response_obj, 'model_dump_json'):
+                problematic_response_info = f"Problematic LLM response (JSON) at time of exception: {model_response_obj.model_dump_json(indent=2)}"
+            else:
+                problematic_response_info = f"Problematic LLM response (str) at time of exception: {str(model_response_obj)}"
+        logger.error(problematic_response_info)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while processing the symptom text.",
+            detail="An error occurred while processing the symptom text with the AI service.",
         )
 
 
@@ -146,7 +192,6 @@ async def save_chat_session(
     chat_room = None
     chat_session = None
     try:
-
         if preprocessed_input.room_number is not None:
             query = select(ChatRoom).where(
                 ChatRoom.patient_id == preprocessed_input.user_id,
@@ -240,7 +285,6 @@ async def get_user_chats_service(current_user, db: AsyncSession):
 
         room_groups = {}
         for session in chat_sessions:
-
             rn = session.room_number
             if rn is not None:
                 if rn not in room_groups:
@@ -260,7 +304,6 @@ async def get_user_chats_service(current_user, db: AsyncSession):
         logger.error(
             f"Error retrieving chat sessions for user {current_user.username}: {exc}"
         )
-
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while retrieving chat sessions.",
@@ -286,19 +329,20 @@ async def extract_symptoms(symptom_text: str) -> SymptomExtraction:
             {"role": "user", "content": symptom_text},
         ]
 
+        logger.info(f"Sending request to LLM for symptom extraction (model: {settings.requesty_model_name})")
         model_response = await loop.run_in_executor(
             None,
             lambda: client.chat.completions.create(
-                model="google/gemini-2.0-flash-exp:free",
+                model=settings.requesty_model_name, # Use model from settings
                 messages=messages,
-                response_format={"type": "json_object"},
+                response_format={"type": "json_object"}, # Keep if model supports it
+                max_tokens=settings.requesty_max_output_tokens, # Add max_tokens
             ),
         )
 
         extraction_text = model_response.choices[0].message.content
         try:
             extraction_data = json.loads(extraction_text)
-
             symptoms = extraction_data.get("symptoms", [])
             confidence = extraction_data.get("confidence_score", 0.5)
             if not isinstance(symptoms, list):
@@ -318,5 +362,5 @@ async def extract_symptoms(symptom_text: str) -> SymptomExtraction:
             return SymptomExtraction(symptoms=[], confidence_score=0.0)
 
     except Exception as exc:
-        logger.error(f"Error in symptom extraction LLM call: {exc}")
+        logger.error(f"Error in symptom extraction LLM call: {exc}", exc_info=True)
         return SymptomExtraction(symptoms=[], confidence_score=0.0)

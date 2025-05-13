@@ -15,7 +15,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    open_router_api_key: str = Field(..., alias="OPEN_ROUTER_API_KEY")
+    
+    requesty_api_key: str = Field(..., alias="REQUESTY_API_KEY")
+    requesty_router_base_url: str = "https://router.requesty.ai/v1"
+    requesty_model_name: str = "google/gemini-2.0-flash-exp" # As requested
+    requesty_max_output_tokens: int = 2048
 
     SMTP_SERVER: str = Field(..., alias="SMTP_SERVER")
     SMTP_PORT: int = Field(587, alias="SMTP_PORT")
